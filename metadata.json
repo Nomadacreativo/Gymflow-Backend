@@ -1,0 +1,8 @@
+{
+  "name": "Remix Gymflow Back Office",
+  "description": "Back Office Administrativo y Ejecutivo para gestión de gimnasios: Dashboard Estratégico, Ventas y MRR, Directorio Maestro, Suscripciones, Auditoría de Accesos, Terminales Edge ZKTeco y Gestión de Instructores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "A gym member.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "avatar": { "type": "string", "maxLength": 500 },
+        "plan": { "type": "string", "maxLength": 50 },
+        "renewalDate": { "type": "string", "maxLength": 50 },
+        "bioStatus": { "type": "string", "maxLength": 20 },
+        "lastAccess": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 20 },
+        "phone": { "type": "string", "maxLength": 20 }
+      },
+      "required": ["name", "email", "plan", "status"]
+    },
+    "AccessEvent": {
+      "title": "Access Event",
+      "description": "Log of a member accessing the gym.",
+      "type": "object",
+      "properties": {
+        "time": { "type": "string", "maxLength": 20 },
+        "memberName": { "type": "string", "maxLength": 100 },
+        "memberId": { "type": "string", "maxLength": 50 },
+        "avatar": { "type": "string", "maxLength": 500 },
+        "terminal": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 20 },
+        "detail": { "type": "string", "maxLength": 200 },
+        "isNew": { "type": "boolean" }
+      },
+      "required": ["time", "memberName", "memberId", "terminal", "status", "detail"]
+    },
+    "PlanItem": {
+      "title": "Plan",
+      "description": "A gym membership plan.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "tag": { "type": "string", "maxLength": 50 },
+        "isPopular": { "type": "boolean" },
+        "price": { "type": "number" },
+        "period": { "type": "string", "maxLength": 50 },
+        "intervalDescription": { "type": "string", "maxLength": 100 },
+        "discountNote": { "type": "string", "maxLength": 100 },
+        "benefits": { "type": "array", "items": { "type": "string", "maxLength": 200 } },
+        "excludedBenefits": { "type": "array", "items": { "type": "string", "maxLength": 200 } },
+        "activeMembers": { "type": "number" }
+      },
+      "required": ["name", "price", "period"]
+    },
+    "TerminalDevice": {
+      "title": "Terminal Device",
+      "description": "A terminal for gym access.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "model": { "type": "string", "maxLength": 50 },
+        "zone": { "type": "string", "maxLength": 100 },
+        "ip": { "type": "string", "maxLength": 50 },
+        "port": { "type": "number" },
+        "status": { "type": "string", "maxLength": 20 },
+        "lastPingMs": { "type": "number" },
+        "hmacKey": { "type": "string", "maxLength": 100 },
+        "capacity": { "type": "string", "maxLength": 50 },
+        "activeUsers": { "type": "number" }
+      },
+      "required": ["name", "model", "zone", "status"]
+    },
+    "Instructor": {
+      "title": "Instructor",
+      "description": "A gym instructor.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "specialty": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "activeClasses": { "type": "number" },
+        "attendanceRate": { "type": "string", "maxLength": 20 },
+        "bioEnrolled": { "type": "boolean" },
+        "terminalsCount": { "type": "number" },
+        "schedule": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "avatar": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["name", "specialty", "email"]
+    },
+    "SystemAlert": {
+      "title": "System Alert",
+      "description": "System notification.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "actionText": { "type": "string", "maxLength": 50 },
+        "severity": { "type": "string", "maxLength": 20 },
+        "timestamp": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["type", "title", "description", "severity", "timestamp"]
+    }
+  },
+  "firestore": {
+    "members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Collection of gym members"
+    },
+    "accessEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/AccessEvent" },
+      "description": "Collection of access events"
+    },
+    "plans/{planId}": {
+      "schema": { "$ref": "#/entities/PlanItem" },
+      "description": "Collection of membership plans"
+    },
+    "terminals/{terminalId}": {
+      "schema": { "$ref": "#/entities/TerminalDevice" },
+      "description": "Collection of access terminals"
+    },
+    "instructors/{instructorId}": {
+      "schema": { "$ref": "#/entities/Instructor" },
+      "description": "Collection of instructors"
+    },
+    "alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SystemAlert" },
+      "description": "Collection of system alerts"
+    }
+  }
+}

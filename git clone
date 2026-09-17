@@ -1,0 +1,7 @@
+git clone https://github.com/Nomadacreativo/Gymflow-Backoffice.git
+cd Gymflow-Backoffice
+
+npx supabase init
+npx supabase login
+npx supabase link --project-ref igcmvzwwowdrvbujjvmk
+npx supabase db pull
