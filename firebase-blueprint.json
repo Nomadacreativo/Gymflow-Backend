@@ -7,7 +7,7 @@
       "properties": {
         "name": { "type": "string", "maxLength": 100 },
         "email": { "type": "string", "maxLength": 100 },
-        "avatar": { "type": "string", "maxLength": 500 },
+        "avatar": { "type": "string", "maxLength": 1000 },
         "plan": { "type": "string", "maxLength": 50 },
         "renewalDate": { "type": "string", "maxLength": 50 },
         "bioStatus": { "type": "string", "maxLength": 20 },
@@ -26,7 +26,7 @@
         "time": { "type": "string", "maxLength": 20 },
         "memberName": { "type": "string", "maxLength": 100 },
         "memberId": { "type": "string", "maxLength": 50 },
-        "avatar": { "type": "string", "maxLength": 500 },
+        "avatar": { "type": "string", "maxLength": 1000 },
         "terminal": { "type": "string", "maxLength": 100 },
         "status": { "type": "string", "maxLength": 20 },
         "detail": { "type": "string", "maxLength": 200 },
@@ -85,7 +85,7 @@
         "schedule": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
         "email": { "type": "string", "maxLength": 100 },
         "phone": { "type": "string", "maxLength": 20 },
-        "avatar": { "type": "string", "maxLength": 500 }
+        "avatar": { "type": "string", "maxLength": 1000 }
       },
       "required": ["name", "specialty", "email"]
     },

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
 import { 
   NavigationTab, 
   Member, 
@@ -16,6 +17,26 @@ import {
   initialAccessEvents, 
   initialSystemAlerts 
 } from './data/mockData';
+import {
+  loginWithGoogle,
+  logoutUser,
+  subscribeToAuth,
+  subscribeToMembers,
+  subscribeToPlans,
+  subscribeToTerminals,
+  subscribeToInstructors,
+  subscribeToAccessEvents,
+  subscribeToAlerts,
+  addMemberToFirestore,
+  updateMemberStatusInFirestore,
+  addPlanToFirestore,
+  updatePlanInFirestore,
+  addTerminalToFirestore,
+  updateTerminalInFirestore,
+  addInstructorToFirestore,
+  addAccessEventToFirestore,
+  checkFirestoreHasData
+} from './lib/firestoreService';
 
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -26,6 +47,7 @@ import { SubscriptionsView } from './components/SubscriptionsView';
 import { AccessAuditView } from './components/AccessAuditView';
 import { TerminalsView } from './components/TerminalsView';
 import { InstructorsView } from './components/InstructorsView';
+import { CloudMigrationModal } from './components/CloudMigrationModal';
 
 import { 
   X, 
@@ -42,7 +64,12 @@ import {
   Server, 
   Dumbbell,
   Wifi,
-  Battery
+  Battery,
+  Cloud,
+  Database,
+  LogIn,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
 export default function App() {
@@ -55,6 +82,15 @@ export default function App() {
   // Modals
   const [showNewMemberModal, setShowNewMemberModal] = useState<boolean>(false);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
+  const [showMigrationModal, setShowMigrationModal] = useState<boolean>(false);
+
+  // Firebase & Cloud State
+  const [user, setUser] = useState<User | null>(null);
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [hasFirestoreData, setHasFirestoreData] = useState<boolean>(false);
+  const [cloudNotification, setCloudNotification] = useState<string | null>(null);
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(false);
 
   // App Data States
   const [members, setMembers] = useState<Member[]>(initialMembers);
@@ -76,8 +112,96 @@ export default function App() {
   const [receiptMethod, setReceiptMethod] = useState('Tarjeta de Débito / Terminal');
   const [receiptSuccess, setReceiptSuccess] = useState(false);
 
-  // Handlers
-  const handleCreateMember = (e: React.FormEvent) => {
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsub = subscribeToAuth(async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setIsSyncing(true);
+        try {
+          const hasData = await checkFirestoreHasData();
+          setHasFirestoreData(hasData);
+        } catch (e) {
+          console.warn('Error checking Firestore data:', e);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to live Firestore collections when user is authenticated
+  useEffect(() => {
+    if (!user) return;
+
+    setIsSyncing(true);
+    const unsubs: (() => void)[] = [];
+
+    const unsubMembers = subscribeToMembers((liveMembers) => {
+      if (liveMembers.length > 0) {
+        setMembers(liveMembers);
+        setHasFirestoreData(true);
+      }
+      setIsSyncing(false);
+    });
+    unsubs.push(unsubMembers);
+
+    const unsubPlans = subscribeToPlans((livePlans) => {
+      if (livePlans.length > 0) setPlans(livePlans);
+    });
+    unsubs.push(unsubPlans);
+
+    const unsubTerminals = subscribeToTerminals((liveTerminals) => {
+      if (liveTerminals.length > 0) setTerminals(liveTerminals);
+    });
+    unsubs.push(unsubTerminals);
+
+    const unsubInstructors = subscribeToInstructors((liveInstructors) => {
+      if (liveInstructors.length > 0) setInstructors(liveInstructors);
+    });
+    unsubs.push(unsubInstructors);
+
+    const unsubEvents = subscribeToAccessEvents((liveEvents) => {
+      if (liveEvents.length > 0) setAccessEvents(liveEvents);
+    });
+    unsubs.push(unsubEvents);
+
+    const unsubAlerts = subscribeToAlerts((liveAlerts) => {
+      if (liveAlerts.length > 0) setAlerts(liveAlerts);
+    });
+    unsubs.push(unsubAlerts);
+
+    return () => {
+      unsubs.forEach(fn => fn());
+    };
+  }, [user]);
+
+  // Auth Handlers
+  const handleGoogleLogin = async () => {
+    try {
+      const loggedUser = await loginWithGoogle();
+      setUser(loggedUser);
+      setCloudNotification(`¡Sesión iniciada con Google! (${loggedUser.email}). Conectado a Firestore.`);
+      setTimeout(() => setCloudNotification(null), 4500);
+    } catch (err) {
+      console.error('Error in Google Login:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+      setCloudNotification('Sesión finalizada. Base de datos en modo local.');
+      setTimeout(() => setCloudNotification(null), 3000);
+    } catch (err) {
+      console.error('Error logging out:', err);
+    }
+  };
+
+  // Handlers for Data Mutations
+  const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberName.trim()) return;
 
@@ -86,7 +210,7 @@ export default function App() {
       id: newId,
       name: newMemberName,
       email: newMemberEmail || `${newMemberName.toLowerCase().replace(/\s+/g, '.')}@email.com`,
-      plan: newMemberPlan,
+      plan: newMemberPlan as any,
       renewalDate: 'Renueva en 30 días',
       bioStatus: newMemberBio,
       lastAccess: 'Hoy (Enrolamiento inicial)',
@@ -99,21 +223,30 @@ export default function App() {
     setNewMemberName('');
     setNewMemberEmail('');
 
-    // Also add to access audit log
+    // Also create access event
     const now = new Date().toTimeString().split(' ')[0];
-    setAccessEvents([
-      {
-        id: `ev-${Date.now()}`,
-        time: now,
-        memberName: newMember.name,
-        memberId: `ID: ${newMember.id}`,
-        terminal: 'Recepción Central',
-        status: 'APROBADO',
-        detail: 'Enrolamiento inicial completado con éxito',
-        isNew: true
-      },
-      ...accessEvents
-    ]);
+    const newEvent: AccessEvent = {
+      id: `ev-${Date.now()}`,
+      time: now,
+      memberName: newMember.name,
+      memberId: `ID: ${newMember.id}`,
+      terminal: 'Recepción Central',
+      status: 'APROBADO',
+      detail: 'Enrolamiento inicial completado con éxito',
+      isNew: true
+    };
+    setAccessEvents([newEvent, ...accessEvents]);
+
+    if (user) {
+      try {
+        await addMemberToFirestore(newMember);
+        await addAccessEventToFirestore(newEvent);
+        setCloudNotification(`Socio ${newMember.name} registrado en Cloud Firestore.`);
+        setTimeout(() => setCloudNotification(null), 3500);
+      } catch (err) {
+        console.error('Error writing member to Firestore:', err);
+      }
+    }
   };
 
   const handleCreateReceipt = (e: React.FormEvent) => {
@@ -125,37 +258,91 @@ export default function App() {
     }, 1200);
   };
 
-  const handleUpdateMemberStatus = (id: string, newStatus: 'Activo' | 'Suspendido') => {
+  const handleUpdateMemberStatus = async (id: string, newStatus: 'Activo' | 'Suspendido') => {
     setMembers(members.map(m => m.id === id ? { ...m, status: newStatus } : m));
+    if (user) {
+      try {
+        await updateMemberStatusInFirestore(id, newStatus);
+      } catch (err) {
+        console.error('Error updating member in Firestore:', err);
+      }
+    }
   };
 
-  const handleUpdatePlan = (updatedPlan: PlanItem) => {
+  const handleUpdatePlan = async (updatedPlan: PlanItem) => {
     setPlans(plans.map(p => p.id === updatedPlan.id ? updatedPlan : p));
+    if (user) {
+      try {
+        await updatePlanInFirestore(updatedPlan);
+      } catch (err) {
+        console.error('Error updating plan in Firestore:', err);
+      }
+    }
   };
 
-  const handleAddNewPlan = (newPlan: PlanItem) => {
+  const handleAddNewPlan = async (newPlan: PlanItem) => {
     setPlans([...plans, newPlan]);
+    if (user) {
+      try {
+        await addPlanToFirestore(newPlan);
+      } catch (err) {
+        console.error('Error adding plan to Firestore:', err);
+      }
+    }
   };
 
-  const handleAddTerminal = (newTerminal: TerminalDevice) => {
+  const handleAddTerminal = async (newTerminal: TerminalDevice) => {
     setTerminals([...terminals, newTerminal]);
+    if (user) {
+      try {
+        await addTerminalToFirestore(newTerminal);
+      } catch (err) {
+        console.error('Error adding terminal to Firestore:', err);
+      }
+    }
   };
 
-  const handleRestartTerminal = (id: string) => {
-    setTerminals(terminals.map(t => {
+  const handleRestartTerminal = async (id: string) => {
+    const updated = terminals.map(t => {
       if (t.id === id) {
-        return { ...t, status: 'En línea', lastPingMs: Math.floor(10 + Math.random() * 8) };
+        return { ...t, status: 'En línea' as const, lastPingMs: Math.floor(10 + Math.random() * 8) };
       }
       return t;
-    }));
+    });
+    setTerminals(updated);
+
+    if (user) {
+      const target = updated.find(t => t.id === id);
+      if (target) {
+        try {
+          await updateTerminalInFirestore(target);
+        } catch (err) {
+          console.error('Error updating terminal in Firestore:', err);
+        }
+      }
+    }
   };
 
-  const handleAddInstructor = (newInst: Instructor) => {
+  const handleAddInstructor = async (newInst: Instructor) => {
     setInstructors([...instructors, newInst]);
+    if (user) {
+      try {
+        await addInstructorToFirestore(newInst);
+      } catch (err) {
+        console.error('Error adding instructor to Firestore:', err);
+      }
+    }
   };
 
-  const handleAddSimulatedAccessEvent = (ev: AccessEvent) => {
+  const handleAddSimulatedAccessEvent = async (ev: AccessEvent) => {
     setAccessEvents([ev, ...accessEvents]);
+    if (user) {
+      try {
+        await addAccessEventToFirestore(ev);
+      } catch (err) {
+        console.error('Error adding access event to Firestore:', err);
+      }
+    }
   };
 
   // Render view router
@@ -339,7 +526,7 @@ export default function App() {
           />
 
           {/* Main Layout Area */}
-          <div className="flex-1 lg:pl-72 flex flex-col min-w-0">
+          <div className="flex-1 lg:pl-72 flex flex-col min-w-0 min-h-screen">
             {/* Header */}
             <Header
               onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
@@ -350,10 +537,84 @@ export default function App() {
               alerts={alerts}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              user={user}
+              onLogin={handleGoogleLogin}
+              onLogout={handleLogout}
+              onOpenMigrationModal={() => setShowMigrationModal(true)}
+              isSyncing={isSyncing}
             />
 
             {/* Viewport Content */}
-            <main className="flex-1 p-4 md:p-8 lg:p-8 pt-24 max-w-7xl w-full mx-auto">
+            <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
+              {/* Executive Cloud Sync Banner */}
+              {!user ? (
+                !isBannerDismissed && (
+                  <div className="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#24005b] to-[#290065] border border-[#35007f] shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 relative group">
+                    <div className="flex items-start sm:items-center gap-3.5 pr-8 lg:pr-0">
+                      <div className="w-11 h-11 rounded-2xl bg-[#35007f] text-[#c3f400] flex items-center justify-center shrink-0 border border-[#42009b] shadow-[0_0_15px_rgba(195,244,0,0.15)]">
+                        <Cloud className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-headline text-sm text-white">Google Cloud Firestore Preparado</span>
+                          <span className="px-2 py-0.5 rounded-full bg-[#140039] text-[#c3f400] text-[10px] font-mono font-bold border border-[#35007f]">
+                            us-east1
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#c4c9ac] mt-1 max-w-2xl leading-relaxed">
+                          Conecta tu cuenta de Google de Administrador para sincronizar y migrar los socios, planes y terminales a la base de datos persistente.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 flex-wrap">
+                      <button
+                        onClick={handleGoogleLogin}
+                        className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(195,244,0,0.3)] active:scale-95 transition-all"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Conectar con Google</span>
+                      </button>
+                      <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="px-4 py-2.5 rounded-full bg-[#140039] hover:bg-[#24005b] text-[#eaddff] font-medium text-xs border border-[#35007f] active:scale-95 transition-all"
+                      >
+                        Centro de Migración
+                      </button>
+                      <button
+                        onClick={() => setIsBannerDismissed(true)}
+                        className="text-[#c4c9ac] hover:text-white p-1 rounded-full transition-colors ml-auto lg:ml-0"
+                        title="Ocultar aviso"
+                        aria-label="Ocultar aviso"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="mb-6 p-3.5 sm:p-4 rounded-2xl bg-[#24005b]/80 border border-[#c3f400]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#c3f400] animate-pulse shadow-[0_0_8px_#c3f400] shrink-0" />
+                    <span className="text-white font-medium">
+                      Cloud Firestore en Vivo • <strong className="text-[#c3f400] font-mono">{user.email}</strong>
+                    </span>
+                    <span className="text-[#c4c9ac] hidden md:inline">
+                      ({members.length} socios, {terminals.length} terminales, {accessEvents.length} accesos)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <button
+                      onClick={() => setShowMigrationModal(true)}
+                      className="text-xs text-[#c3f400] hover:underline font-semibold flex items-center gap-1.5"
+                    >
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Administrar Migración a Firestore</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {renderCurrentView()}
             </main>
           </div>
@@ -527,6 +788,34 @@ export default function App() {
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Modal: Centro de Migración Cloud Firestore */}
+      <CloudMigrationModal
+        isOpen={showMigrationModal}
+        onClose={() => setShowMigrationModal(false)}
+        user={user}
+        onLogin={handleGoogleLogin}
+        onMigrationComplete={() => {
+          setHasFirestoreData(true);
+          setCloudNotification('¡Base de datos migrada a Firestore con éxito!');
+          setTimeout(() => setCloudNotification(null), 4000);
+        }}
+        isCloudConnected={isCloudConnected}
+      />
+
+      {/* Floating Cloud Notification Toast */}
+      {cloudNotification && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#290065] border border-[#c3f400] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
+          <Sparkles className="w-5 h-5 text-[#c3f400] shrink-0" />
+          <span className="text-xs font-medium">{cloudNotification}</span>
+          <button
+            onClick={() => setCloudNotification(null)}
+            className="text-[#c4c9ac] hover:text-white ml-2 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
