@@ -15,7 +15,9 @@ import {
   Edit, 
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 import { Member } from '../types';
 
@@ -37,6 +39,7 @@ export const MembersView: React.FC<MembersViewProps> = ({
   const [bioFilter, setBioFilter] = useState<'Todos' | 'Registrada' | 'Pendiente'>('Todos');
   const [viewLayout, setViewLayout] = useState<'table' | 'grid'>('table');
   const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 12;
 
   // Filter members
   const filteredMembers = useMemo(() => {
@@ -53,6 +56,21 @@ export const MembersView: React.FC<MembersViewProps> = ({
       return matchesSearch && matchesStatus && matchesBio;
     });
   }, [members, localSearch, searchQuery, statusFilter, bioFilter]);
+
+  // Paginated view
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredMembers.slice(start, start + pageSize);
+  }, [filteredMembers, currentPage, pageSize]);
+
+  // Dynamic KPIs computed from real members
+  const totalActive = members.filter(m => m.status === 'Activo').length;
+  const totalBioPending = members.filter(m => m.bioStatus === 'Pendiente').length;
+  const totalRenewalsSoon = members.filter(m => 
+    m.renewalDate && (m.renewalDate.toLowerCase().includes('vence') || m.renewalDate.toLowerCase().includes('días'))
+  ).length;
+  const totalSuspended = members.filter(m => m.status === 'Suspendido').length;
 
   const handleExportCSV = () => {
     const headers = "ID,Nombre,Email,Plan,Renovación,Biometría,Último Acceso,Ubicación,Estado\n";
@@ -89,7 +107,8 @@ export const MembersView: React.FC<MembersViewProps> = ({
         <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={handleExportCSV}
-            className="h-11 px-4 rounded-full border border-[#35007f] bg-[#290065] text-[#eaddff] hover:bg-[#35007f] transition-colors flex items-center gap-2 text-xs font-semibold"
+            disabled={filteredMembers.length === 0}
+            className="h-11 px-4 rounded-full border border-[#35007f] bg-[#290065] text-[#eaddff] hover:bg-[#35007f] disabled:opacity-40 transition-colors flex items-center gap-2 text-xs font-semibold"
           >
             <Download className="w-4 h-4 text-[#c4c9ac]" />
             <span>Exportar CSV</span>
@@ -116,12 +135,14 @@ export const MembersView: React.FC<MembersViewProps> = ({
                 <Users className="w-5 h-5" />
               </div>
             </div>
-            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">4,289</div>
+            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">{totalActive}</div>
           </div>
           <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-[#35007f]/40 text-xs">
             <TrendingUp className="w-3.5 h-3.5 text-[#c3f400]" />
-            <span className="text-[#c3f400] font-bold">+12%</span>
-            <span className="text-[#c4c9ac]">vs. mes anterior</span>
+            <span className="text-[#c3f400] font-bold">
+              {members.length > 0 ? `${Math.round((totalActive / members.length) * 100)}%` : '0%'}
+            </span>
+            <span className="text-[#c4c9ac]">del padrón total</span>
           </div>
         </div>
 
@@ -134,26 +155,29 @@ export const MembersView: React.FC<MembersViewProps> = ({
                 <Fingerprint className="w-5 h-5" />
               </div>
             </div>
-            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">142</div>
+            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">{totalBioPending}</div>
           </div>
           <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-[#35007f]/40 text-xs text-[#ffb4ab] font-medium">
-            <span>Requieren enrolamiento facial</span>
+            <span>Requieren enrolamiento en torno</span>
           </div>
         </div>
 
-        {/* Renovaciones (7d) */}
+        {/* Renovaciones Próximas */}
         <div className="bg-[#290065] rounded-3xl p-6 border border-[#35007f]/50 flex flex-col justify-between shadow-lg">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] uppercase tracking-widest text-[#c4c9ac] font-bold">Renovaciones (7d)</span>
+              <span className="text-[10px] uppercase tracking-widest text-[#c4c9ac] font-bold">Renovaciones Próximas</span>
               <div className="w-10 h-10 rounded-full bg-[#35007f] text-[#c3f400] flex items-center justify-center">
                 <Clock className="w-5 h-5" />
               </div>
             </div>
-            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">384</div>
+            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">{totalRenewalsSoon}</div>
           </div>
           <div className="w-full h-2 bg-[#140039] rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-[#c3f400] w-[65%] rounded-full shadow-[0_0_8px_#c3f400]" />
+            <div 
+              className="h-full bg-[#c3f400] rounded-full shadow-[0_0_8px_#c3f400]" 
+              style={{ width: `${members.length > 0 ? Math.min(100, (totalRenewalsSoon / members.length) * 100) : 0}%` }}
+            />
           </div>
         </div>
 
@@ -166,10 +190,10 @@ export const MembersView: React.FC<MembersViewProps> = ({
                 <Ban className="w-5 h-5" />
               </div>
             </div>
-            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">89</div>
+            <div className="font-headline text-2xl md:text-3xl text-white tracking-tight">{totalSuspended}</div>
           </div>
           <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-[#35007f]/40 text-xs text-[#c4c9ac]">
-            <span>Por mora en cobro bancario</span>
+            <span>Acceso bloqueado en torniquete</span>
           </div>
         </div>
       </div>
@@ -183,8 +207,11 @@ export const MembersView: React.FC<MembersViewProps> = ({
             <input
               type="text"
               value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="ID, Nombre o Email..."
+              onChange={(e) => {
+                setLocalSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por ID, Nombre o Email..."
               className="bg-transparent border-none outline-none text-[#eaddff] text-xs w-full placeholder:text-[#c4c9ac]/60"
             />
           </div>
@@ -194,7 +221,10 @@ export const MembersView: React.FC<MembersViewProps> = ({
             <span className="w-2 h-2 rounded-full bg-[#c3f400] mr-2" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as any);
+                setCurrentPage(1);
+              }}
               className="bg-transparent text-xs text-[#eaddff] outline-none cursor-pointer pr-2 font-medium"
             >
               <option value="Todos" className="bg-[#140039] text-white">Estado: Todos</option>
@@ -208,7 +238,10 @@ export const MembersView: React.FC<MembersViewProps> = ({
             <Fingerprint className="w-3.5 h-3.5 text-[#c4c9ac] mr-2" />
             <select
               value={bioFilter}
-              onChange={(e) => setBioFilter(e.target.value as any)}
+              onChange={(e) => {
+                setBioFilter(e.target.value as any);
+                setCurrentPage(1);
+              }}
               className="bg-transparent text-xs text-[#eaddff] outline-none cursor-pointer pr-2 font-medium"
             >
               <option value="Todos" className="bg-[#140039] text-white">Biometría: Todos</option>
@@ -246,7 +279,26 @@ export const MembersView: React.FC<MembersViewProps> = ({
       </div>
 
       {/* Main Members Content (Table or Grid) */}
-      {viewLayout === 'table' ? (
+      {filteredMembers.length === 0 ? (
+        <div className="bg-[#290065] rounded-3xl p-12 text-center border border-[#35007f]/60 shadow-xl flex flex-col items-center justify-center gap-3">
+          <div className="w-16 h-16 rounded-3xl bg-[#140039] text-[#c4c9ac] flex items-center justify-center border border-[#35007f] shadow-md">
+            <Users className="w-8 h-8 text-[#c3f400]" />
+          </div>
+          <h3 className="font-headline text-lg text-white">Sin socios registrados</h3>
+          <p className="text-xs text-[#c4c9ac] max-w-md leading-relaxed">
+            {members.length === 0
+              ? 'La base de datos está lista para nuevos registros reales. Comienza dando de alta a tu primer socio con el botón superior.'
+              : 'No hay socios que coincidan con los filtros de búsqueda aplicados.'}
+          </p>
+          <button
+            onClick={onOpenNewMember}
+            className="mt-2 px-5 py-2.5 rounded-full bg-[#c3f400] text-[#161e00] font-bold text-xs hover:bg-[#abd600] transition-all flex items-center gap-2 shadow-lg"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Registrar Primer Socio</span>
+          </button>
+        </div>
+      ) : viewLayout === 'table' ? (
         <div className="bg-[#290065] rounded-3xl overflow-hidden shadow-xl border border-[#35007f]/60">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[760px]">
@@ -261,7 +313,7 @@ export const MembersView: React.FC<MembersViewProps> = ({
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-[#35007f]/40">
-                {filteredMembers.map((m) => (
+                {paginatedMembers.map((m) => (
                   <tr 
                     key={m.id}
                     className={`hover:bg-[#35007f]/40 transition-colors ${
@@ -296,11 +348,11 @@ export const MembersView: React.FC<MembersViewProps> = ({
                           {m.plan}
                         </span>
                         <p className={`text-xs ${
-                          m.renewalDate.includes('Vence en') || m.renewalDate.includes('Vencido') 
+                          m.renewalDate && (m.renewalDate.includes('Vence en') || m.renewalDate.includes('Vencido'))
                             ? 'text-[#ffb4ab] font-bold' 
                             : 'text-[#c4c9ac]'
                         }`}>
-                          {m.renewalDate}
+                          {m.renewalDate || 'Sin fecha'}
                         </p>
                       </div>
                     </td>
@@ -319,10 +371,10 @@ export const MembersView: React.FC<MembersViewProps> = ({
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex flex-col gap-0.5">
-                        <p className="text-white text-xs font-semibold">{m.lastAccess}</p>
+                        <p className="text-white text-xs font-semibold">{m.lastAccess || 'Sin accesos'}</p>
                         <p className="text-[11px] text-[#c4c9ac] flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-[#c3f400]" />
-                          {m.location}
+                          {m.location || 'Sede Principal'}
                         </p>
                       </div>
                     </td>
@@ -345,13 +397,6 @@ export const MembersView: React.FC<MembersViewProps> = ({
                             <RotateCcw className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={onOpenNewMember}
-                          className="p-2 rounded-full bg-[#140039] hover:bg-[#35007f] text-[#c4c9ac] hover:text-white transition-colors border border-[#35007f]"
-                          title="Editar información"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -360,43 +405,38 @@ export const MembersView: React.FC<MembersViewProps> = ({
             </table>
           </div>
 
-          {/* Pagination Footer */}
+          {/* Dynamic Pagination Footer */}
           <div className="bg-[#140039] p-4 flex flex-col sm:flex-row items-center justify-between border-t border-[#35007f] gap-3 text-xs text-[#c4c9ac]">
-            <p>Mostrando {filteredMembers.length} de 4,289 miembros registrados</p>
-            <div className="flex items-center gap-1.5">
-              <button 
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] flex items-center justify-center hover:bg-[#35007f] disabled:opacity-40 transition-colors text-white"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-full bg-[#c3f400] text-[#161e00] font-bold">
-                1
-              </button>
-              <button className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] hover:bg-[#35007f] text-white transition-colors">
-                2
-              </button>
-              <button className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] hover:bg-[#35007f] text-white transition-colors">
-                3
-              </button>
-              <span className="px-1 text-[#c4c9ac]">...</span>
-              <button className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] hover:bg-[#35007f] text-white transition-colors">
-                86
-              </button>
-              <button 
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] flex items-center justify-center hover:bg-[#35007f] transition-colors text-white"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <p>
+              Mostrando {paginatedMembers.length} de {filteredMembers.length} socio{filteredMembers.length === 1 ? '' : 's'} (Total: {members.length})
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] flex items-center justify-center hover:bg-[#35007f] disabled:opacity-40 transition-colors text-white"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-3 py-1 bg-[#290065] rounded-full text-white font-mono text-xs">
+                  {currentPage} / {totalPages}
+                </span>
+                <button 
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="w-8 h-8 rounded-full bg-[#290065] border border-[#35007f] flex items-center justify-center hover:bg-[#35007f] disabled:opacity-40 transition-colors text-white"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : (
         /* Grid Layout */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredMembers.map((m) => (
+          {paginatedMembers.map((m) => (
             <div 
               key={m.id}
               className="bg-[#290065] rounded-3xl p-6 border border-[#35007f]/60 shadow-lg flex flex-col justify-between hover:border-[#c3f400]/40 transition-all"
@@ -443,11 +483,11 @@ export const MembersView: React.FC<MembersViewProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#c4c9ac]">Renovación:</span>
-                    <span className="text-white font-mono">{m.renewalDate}</span>
+                    <span className="text-white font-mono">{m.renewalDate || 'Sin fecha'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#c4c9ac]">Último Acceso:</span>
-                    <span className="text-[#eaddff]">{m.lastAccess}</span>
+                    <span className="text-[#eaddff]">{m.lastAccess || 'Sin accesos'}</span>
                   </div>
                 </div>
               </div>
@@ -458,12 +498,6 @@ export const MembersView: React.FC<MembersViewProps> = ({
                   className="flex-1 py-2 rounded-full bg-[#140039] hover:bg-[#35007f] text-[#eaddff] text-xs font-semibold transition-colors border border-[#35007f]"
                 >
                   {m.status === 'Activo' ? 'Suspender' : 'Reactivar'}
-                </button>
-                <button
-                  onClick={onOpenNewMember}
-                  className="px-4 py-2 rounded-full bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] text-xs font-bold transition-colors"
-                >
-                  Editar
                 </button>
               </div>
             </div>

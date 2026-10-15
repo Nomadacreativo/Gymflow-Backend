@@ -10,6 +10,7 @@ import {
   Dumbbell, 
   Server,
   Calendar,
+  Sparkles,
   ShieldAlert
 } from 'lucide-react';
 
@@ -29,6 +30,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems: { tab: NavigationTab; label: string; icon: React.ReactNode }[] = [
     { tab: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard className="w-5 h-5 mr-4 shrink-0" /> },
     { tab: 'miembros', label: 'Miembros', icon: <Users className="w-5 h-5 mr-4 shrink-0" /> },
+    { tab: 'calendar', label: 'Google Calendar', icon: <Calendar className="w-5 h-5 mr-4 shrink-0 text-[#c3f400]" /> },
+    { tab: 'gemini', label: 'Agente Gemini AI', icon: <Sparkles className="w-5 h-5 mr-4 shrink-0 text-[#c3f400]" /> },
     { tab: 'suscripciones', label: 'Suscripciones', icon: <CreditCard className="w-5 h-5 mr-4 shrink-0" /> },
     { tab: 'ventas', label: 'Ventas', icon: <TrendingUp className="w-5 h-5 mr-4 shrink-0" /> },
     { tab: 'accesos', label: 'Personal & Accesos', icon: <Fingerprint className="w-5 h-5 mr-4 shrink-0" /> },

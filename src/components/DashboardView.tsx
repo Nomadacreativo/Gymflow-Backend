@@ -15,15 +15,20 @@ import {
   Fingerprint,
   Server,
   CreditCard,
-  Package
+  Package,
+  Calendar,
+  Sparkles
 } from 'lucide-react';
-import { SystemAlert, NavigationTab } from '../types';
+import { SystemAlert, NavigationTab, Member, PlanItem, TerminalDevice } from '../types';
 
 interface DashboardViewProps {
   onNavigate: (tab: NavigationTab) => void;
   onOpenNewMember: () => void;
   onOpenReceipt: () => void;
   alerts: SystemAlert[];
+  members?: Member[];
+  plans?: PlanItem[];
+  terminals?: TerminalDevice[];
   onDismissAlert?: (id: string) => void;
 }
 
@@ -32,17 +37,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewMember,
   onOpenReceipt,
   alerts,
+  members = [],
+  plans = [],
+  terminals = [],
 }) => {
   const [chartPeriod, setChartPeriod] = useState<'Mensual' | 'Trimestral'>('Mensual');
   const [edgeRestarting, setEdgeRestarting] = useState(false);
-  const [edgeStatus, setEdgeStatus] = useState<'offline' | 'online'>('offline');
+  const [edgeStatus, setEdgeStatus] = useState<'offline' | 'online'>('online');
+
+  // Compute dynamic metrics
+  const activeMembers = members.filter(m => m.status === 'Activo');
+  const activeCount = activeMembers.length;
+  const suspendedCount = members.filter(m => m.status === 'Suspendido').length;
+
+  // Real MRR calculated from active members' plans
+  const computedMRR = activeMembers.reduce((sum, member) => {
+    const matchingPlan = plans.find(
+      p => p.name.toLowerCase() === member.plan.toLowerCase() || p.id === member.plan
+    );
+    return sum + (matchingPlan ? matchingPlan.price : 899);
+  }, 0);
+
+  const churnRate = members.length > 0
+    ? ((suspendedCount / members.length) * 100).toFixed(1)
+    : '0.0';
+
+  const occupancyRate = members.length > 0
+    ? Math.min(100, Math.round((activeCount / 450) * 100))
+    : 0;
 
   const handleRestartEdge = () => {
     setEdgeRestarting(true);
     setTimeout(() => {
       setEdgeRestarting(false);
       setEdgeStatus('online');
-    }, 1800);
+    }, 1500);
   };
 
   return (
@@ -58,12 +87,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <span className="inline-flex items-center gap-1 bg-[#35007f] px-3 py-1 rounded-full font-body text-xs font-bold text-[#c3f400]">
               <TrendingUp className="w-3.5 h-3.5" />
-              12.5%
+              {members.length > 0 ? '+12.5%' : '0%'}
             </span>
           </div>
           <div className="relative z-10 flex flex-col gap-1">
-            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">MRR (Mensual)</p>
-            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">$45,230 MXN</h2>
+            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">MRR (Mensual Activo)</p>
+            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">
+              ${computedMRR.toLocaleString('es-MX')} MXN
+            </h2>
           </div>
         </div>
 
@@ -76,12 +107,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <span className="inline-flex items-center gap-1 bg-[#35007f] px-3 py-1 rounded-full font-body text-xs font-bold text-[#ffb4ab]">
               <TrendingUp className="w-3.5 h-3.5" />
-              1.2%
+              {churnRate}%
             </span>
           </div>
           <div className="relative z-10 flex flex-col gap-1">
-            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">Tasa de Cancelación</p>
-            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">3.8%</h2>
+            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">Tasa de Suspensión</p>
+            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">{churnRate}%</h2>
           </div>
         </div>
 
@@ -94,12 +125,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <span className="inline-flex items-center gap-1 bg-[#35007f] px-3 py-1 rounded-full font-body text-xs font-bold text-[#c3f400]">
               <TrendingUp className="w-3.5 h-3.5" />
-              8.4%
+              {activeCount}
             </span>
           </div>
           <div className="relative z-10 flex flex-col gap-1">
-            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">Nuevas Altas</p>
-            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">142</h2>
+            <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold">Socios Registrados</p>
+            <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">{members.length}</h2>
           </div>
         </div>
 
@@ -111,17 +142,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Flame className="w-6 h-6 text-[#161e00]" />
             </div>
             <span className="inline-flex items-center gap-1 bg-[#42009b] px-3 py-1 rounded-full font-body text-xs text-white font-medium">
-              Actual
+              Aforo
             </span>
           </div>
           <div className="relative z-10">
             <p className="font-body text-xs text-[#c4c9ac] uppercase tracking-wider font-semibold mb-1">Ocupación</p>
             <div className="flex items-baseline gap-2">
-              <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">78%</h2>
+              <h2 className="font-headline text-2xl sm:text-3xl text-white tracking-tight">{occupancyRate}%</h2>
               <span className="font-body text-sm text-[#c4c9ac]">/ cap. 450</span>
             </div>
             <div className="w-full bg-[#42009b] h-2 rounded-full mt-3 overflow-hidden">
-              <div className="bg-[#c3f400] h-full rounded-full shadow-[0_0_8px_#c3f400]" style={{ width: '78%' }} />
+              <div 
+                className="bg-[#c3f400] h-full rounded-full shadow-[0_0_8px_#c3f400] transition-all duration-500" 
+                style={{ width: `${occupancyRate}%` }} 
+              />
             </div>
           </div>
         </div>
@@ -136,7 +170,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
               <div>
                 <h3 className="font-headline text-2xl text-white tracking-tight">Flujo Financiero</h3>
-                <p className="font-body text-sm text-[#c4c9ac] mt-0.5">Ingresos vs Gastos (Q3)</p>
+                <p className="font-body text-sm text-[#c4c9ac] mt-0.5">Ingresos Recurrentes vs Gastos Operativos</p>
               </div>
               <div className="flex items-center gap-2 bg-[#35007f] rounded-full p-1 self-start sm:self-auto">
                 <button 
@@ -170,38 +204,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <line x1="0" y1="25" x2="100" y2="25" stroke="#444933" strokeOpacity="0.4" strokeDasharray="1 1" strokeWidth="0.2" />
                 <line x1="0" y1="40" x2="100" y2="40" stroke="#444933" strokeOpacity="0.4" strokeDasharray="1 1" strokeWidth="0.2" />
 
-                {/* Income Line (Primary Neon Lime) */}
+                {/* Income Line */}
                 <path 
-                  d="M0,40 Q10,35 20,20 T40,15 T60,25 T80,5 T100,10" 
+                  d="M0,45 Q15,38 30,28 T60,20 T85,12 T100,8" 
                   fill="none" 
                   stroke="#c3f400" 
-                  strokeWidth="1.8"
+                  strokeWidth="2"
                   className="drop-shadow-[0_4px_10px_rgba(195,244,0,0.5)]" 
                 />
 
-                {/* Expenses Line (Neutral/Error Red) */}
+                {/* Expenses Line */}
                 <path 
-                  d="M0,45 Q15,40 30,35 T50,38 T70,30 T90,32 T100,28" 
+                  d="M0,48 Q20,44 40,40 T70,35 T90,32 T100,30" 
                   fill="none" 
                   stroke="#ffb4ab" 
                   strokeOpacity="0.6"
                   strokeWidth="1.2" 
                 />
 
-                {/* Data Points on Income Line */}
-                <circle cx="20" cy="20" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
-                <circle cx="40" cy="15" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
-                <circle cx="80" cy="5" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
+                <circle cx="30" cy="28" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
+                <circle cx="60" cy="20" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
+                <circle cx="100" cy="8" r="1.8" fill="#1a0046" stroke="#c3f400" strokeWidth="0.8" />
               </svg>
 
-              {/* Month Labels */}
               <div className="absolute -bottom-1 left-0 right-0 flex justify-between px-2 font-body text-xs text-[#c4c9ac]">
+                <span>Ene</span>
+                <span>Mar</span>
+                <span>May</span>
                 <span>Jul</span>
-                <span>Ago</span>
                 <span>Sep</span>
-                <span>Oct</span>
                 <span>Nov</span>
-                <span>Dic</span>
               </div>
             </div>
           </div>
@@ -211,7 +243,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline text-xl text-white flex items-center gap-3">
                 <Router className="w-5 h-5 text-[#c3f400]" />
-                Terminales ZKTeco
+                Terminales Edge ZKTeco
               </h3>
               <span className="flex h-3 w-3 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c3f400] opacity-75" />
@@ -220,165 +252,114 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Terminal 1 */}
-              <div 
-                onClick={() => onNavigate('terminales')}
-                className="bg-[#35007f] rounded-3xl p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform cursor-pointer border border-[#42009b]/50"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-full bg-[#c3f400]/10 flex items-center justify-center">
-                    <Fingerprint className="w-5 h-5 text-[#c3f400]" />
-                  </div>
-                  <span className="px-2.5 py-1 bg-[#c3f400]/20 text-[#c3f400] rounded-lg font-body text-xs font-bold">
-                    En línea
-                  </span>
-                </div>
-                <div>
-                  <p className="font-body text-sm font-semibold text-white">Torno Principal A</p>
-                  <p className="font-mono text-xs text-[#c4c9ac] mt-1">IP: 192.168.1.101</p>
-                </div>
-              </div>
-
-              {/* Terminal 2 */}
-              <div 
-                onClick={() => onNavigate('terminales')}
-                className="bg-[#35007f] rounded-3xl p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform cursor-pointer border border-[#42009b]/50"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-full bg-[#c3f400]/10 flex items-center justify-center">
-                    <Fingerprint className="w-5 h-5 text-[#c3f400]" />
-                  </div>
-                  <span className="px-2.5 py-1 bg-[#c3f400]/20 text-[#c3f400] rounded-lg font-body text-xs font-bold">
-                    En línea
-                  </span>
-                </div>
-                <div>
-                  <p className="font-body text-sm font-semibold text-white">Torno Principal B</p>
-                  <p className="font-mono text-xs text-[#c4c9ac] mt-1">IP: 192.168.1.102</p>
-                </div>
-              </div>
-
-              {/* Terminal 3 (VIP) */}
-              <div 
-                onClick={() => onNavigate('terminales')}
-                className={`rounded-3xl p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform cursor-pointer border relative overflow-hidden ${
-                  edgeStatus === 'online'
-                    ? 'bg-[#35007f] border-[#42009b]/50'
-                    : 'bg-[#35007f] border-[#ffb4ab]/40'
-                }`}
-              >
-                {edgeStatus !== 'online' && (
-                  <div className="absolute inset-0 bg-[#ffb4ab]/5 pointer-events-none" />
-                )}
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    edgeStatus === 'online' ? 'bg-[#c3f400]/10' : 'bg-[#ffb4ab]/10'
-                  }`}>
-                    {edgeStatus === 'online' ? (
+              {terminals.slice(0, 3).map((term) => (
+                <div 
+                  key={term.id}
+                  onClick={() => onNavigate('terminales')}
+                  className="bg-[#35007f] rounded-3xl p-5 flex flex-col justify-between hover:-translate-y-1 transition-transform cursor-pointer border border-[#42009b]/50 shadow-md"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-full bg-[#c3f400]/10 flex items-center justify-center">
                       <Fingerprint className="w-5 h-5 text-[#c3f400]" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-[#ffb4ab]" />
-                    )}
+                    </div>
+                    <span className="px-2.5 py-1 bg-[#c3f400]/20 text-[#c3f400] rounded-lg font-body text-xs font-bold">
+                      {term.status}
+                    </span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-lg font-body text-xs font-bold ${
-                    edgeStatus === 'online'
-                      ? 'bg-[#c3f400]/20 text-[#c3f400]'
-                      : 'bg-[#ffb4ab]/20 text-[#ffb4ab]'
-                  }`}>
-                    {edgeStatus === 'online' ? 'En línea' : 'Fuera de línea'}
-                  </span>
+                  <div>
+                    <p className="font-body text-sm font-semibold text-white">{term.name}</p>
+                    <p className="font-mono text-xs text-[#c4c9ac] mt-1">IP: {term.ip}</p>
+                  </div>
                 </div>
-                <div className="relative z-10">
-                  <p className="font-body text-sm font-semibold text-white">Acceso VIP</p>
-                  <p className={`font-body text-xs mt-1 ${
-                    edgeStatus === 'online' ? 'text-[#c3f400]' : 'text-[#ffb4ab]'
-                  }`}>
-                    {edgeStatus === 'online' ? 'IP: 192.168.1.103 [OK]' : 'Fallo de conexión'}
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Alerts & Activity */}
+        {/* Right Column: Alerts & Quick Shortcuts */}
         <div className="flex flex-col gap-6">
-          {/* Critical Alerts */}
-          <div className="bg-[#290065] rounded-[2.5rem] p-6 flex-1 flex flex-col relative overflow-hidden border border-[#35007f]/50 shadow-xl">
+          {/* Critical Alerts Dynamic Box */}
+          <div className="bg-[#290065] rounded-[2.5rem] p-6 flex flex-col relative overflow-hidden border border-[#35007f]/50 shadow-xl">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#ffb4ab]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-            <div className="flex justify-between items-center mb-6 relative z-10">
+            <div className="flex justify-between items-center mb-5 relative z-10">
               <h3 className="font-headline text-xl text-white flex items-center gap-2">
                 <Megaphone className="w-5 h-5 text-[#ffb4ab]" />
-                Alertas Críticas
+                Alertas del Sistema
               </h3>
-              <span className="bg-[#ffb4ab] text-[#690005] w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(255,180,171,0.4)]">
-                3
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-md ${
+                alerts.length > 0 
+                  ? 'bg-[#ffb4ab] text-[#690005]' 
+                  : 'bg-[#c3f400] text-[#161e00]'
+              }`}>
+                {alerts.length}
               </span>
             </div>
 
-            <div className="flex flex-col gap-4 relative z-10">
-              {/* Alert 1 */}
-              <div className="bg-[#42009b] p-4 rounded-2xl flex gap-4 items-start border-l-4 border-[#ffb4ab]">
-                <div className="w-10 h-10 rounded-full bg-[#ffb4ab]/10 flex-shrink-0 flex items-center justify-center mt-1">
-                  <CreditCard className="w-5 h-5 text-[#ffb4ab]" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="font-body text-sm font-semibold text-white">Pago Vencido: Socio VIP</p>
-                  <p className="font-body text-xs text-[#c4c9ac] leading-snug">
-                    Carlos Mendoza (ID: 8492) intentó acceder. Pago pendiente por $120 MXN.
-                  </p>
-                  <button 
-                    onClick={onOpenReceipt}
-                    className="mt-2 text-[#c3f400] font-body text-xs font-bold hover:underline uppercase tracking-wider text-left"
-                  >
-                    Resolver Ahora →
-                  </button>
-                </div>
-              </div>
-
-              {/* Alert 2 */}
-              <div className="bg-[#42009b] p-4 rounded-2xl flex gap-4 items-start border-l-4 border-[#ffb4ab]">
-                <div className="w-10 h-10 rounded-full bg-[#ffb4ab]/10 flex-shrink-0 flex items-center justify-center mt-1">
-                  <Server className="w-5 h-5 text-[#ffb4ab]" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="font-body text-sm font-semibold text-white">Conector Edge Caído</p>
-                  <p className="font-body text-xs text-[#c4c9ac] leading-snug">
-                    Sincronización con nube interrumpida hace 14 minutos.
-                  </p>
-                  <button 
-                    onClick={handleRestartEdge}
-                    disabled={edgeRestarting || edgeStatus === 'online'}
-                    className="mt-2 text-[#c3f400] font-body text-xs font-bold hover:underline uppercase tracking-wider text-left flex items-center gap-1.5"
-                  >
-                    <RotateCcw className={`w-3.5 h-3.5 ${edgeRestarting ? 'animate-spin' : ''}`} />
-                    <span>
-                      {edgeRestarting 
-                        ? 'Reiniciando...' 
-                        : edgeStatus === 'online' 
-                          ? 'Servicio Restaurado ✓' 
-                          : 'Reiniciar Servicio'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Alert 3 */}
-              <div className="bg-[#42009b] p-4 rounded-2xl flex gap-4 items-start border-l-4 border-[#8e9379]">
-                <div className="w-10 h-10 rounded-full bg-[#35007f] flex-shrink-0 flex items-center justify-center mt-1">
-                  <Package className="w-5 h-5 text-[#c4c9ac]" />
-                </div>
-                <div>
-                  <p className="font-body text-sm font-semibold text-white">Inventario Bajo: Proteína Suero</p>
-                  <p className="font-body text-xs text-[#c4c9ac] leading-snug mt-0.5">
-                    Inventario de cafetería al 10%.
+            <div className="flex flex-col gap-3 relative z-10">
+              {alerts.length === 0 ? (
+                <div className="p-5 rounded-2xl bg-[#35007f]/50 border border-[#42009b] text-center flex flex-col items-center justify-center gap-2">
+                  <CheckCircle2 className="w-8 h-8 text-[#c3f400]" />
+                  <p className="text-sm font-semibold text-white">Sistemas al 100%</p>
+                  <p className="text-xs text-[#c4c9ac] leading-relaxed">
+                    No hay alertas pendientes. Terminales ZKTeco y pagos sincronizados con normalidad.
                   </p>
                 </div>
-              </div>
+              ) : (
+                alerts.map((alt) => (
+                  <div key={alt.id} className="bg-[#42009b] p-4 rounded-2xl flex gap-3.5 items-start border-l-4 border-[#ffb4ab]">
+                    <div className="w-9 h-9 rounded-full bg-[#ffb4ab]/10 flex-shrink-0 flex items-center justify-center mt-0.5">
+                      <CreditCard className="w-4 h-4 text-[#ffb4ab]" />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="font-body text-xs font-bold text-white">{alt.title}</p>
+                      <p className="font-body text-[11px] text-[#c4c9ac] leading-snug">{alt.description}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Quick Actions matching screen.png */}
+          {/* Google Workspace & Gemini Quick Action Modules */}
+          <div className="bg-[#290065] rounded-[2.5rem] p-6 border border-[#35007f]/50 shadow-xl space-y-3">
+            <h3 className="font-headline text-lg text-white mb-2">Herramientas Conectadas</h3>
+
+            {/* Google Calendar banner */}
+            <div 
+              onClick={() => onNavigate('calendar')}
+              className="p-4 rounded-2xl bg-[#140039] hover:bg-[#35007f] border border-[#35007f] cursor-pointer transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#35007f] group-hover:bg-[#c3f400] text-[#c3f400] group-hover:text-[#161e00] flex items-center justify-center transition-colors">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-xs">Google Calendar</p>
+                  <p className="text-[10px] text-[#c4c9ac]">Sincronizar agenda y clases</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-[#c3f400] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </div>
+
+            {/* Gemini AI banner */}
+            <div 
+              onClick={() => onNavigate('gemini')}
+              className="p-4 rounded-2xl bg-[#140039] hover:bg-[#35007f] border border-[#35007f] cursor-pointer transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#35007f] group-hover:bg-[#c3f400] text-[#c3f400] group-hover:text-[#161e00] flex items-center justify-center transition-colors">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-xs">Agente Gemini AI</p>
+                  <p className="text-[10px] text-[#c4c9ac]">Organizador ejecutivo del club</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-[#c3f400] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Quick Actions (Nuevo Socio / Facturar) */}
           <div className="bg-[#c3f400] rounded-[2.5rem] p-6 relative overflow-hidden group shadow-[0_0_30px_rgba(195,244,0,0.3)]">
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
             <div className="relative z-10">
@@ -388,14 +369,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={onOpenNewMember}
-                  className="bg-black/10 hover:bg-black/20 text-[#161e00] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all h-32 hover:scale-[1.02] active:scale-95"
+                  className="bg-black/10 hover:bg-black/20 text-[#161e00] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all h-28 hover:scale-[1.02] active:scale-95"
                 >
                   <UserPlus className="w-6 h-6" />
                   <span className="font-body text-xs font-bold">Nuevo Socio</span>
                 </button>
                 <button 
                   onClick={onOpenReceipt}
-                  className="bg-black/10 hover:bg-black/20 text-[#161e00] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all h-32 hover:scale-[1.02] active:scale-95"
+                  className="bg-black/10 hover:bg-black/20 text-[#161e00] p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all h-28 hover:scale-[1.02] active:scale-95"
                 >
                   <Receipt className="w-6 h-6" />
                   <span className="font-body text-xs font-bold">Facturar</span>

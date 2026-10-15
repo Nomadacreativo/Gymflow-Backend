@@ -30,7 +30,9 @@ import {
   initialTerminals, 
   initialInstructors, 
   initialAccessEvents, 
-  initialSystemAlerts 
+  initialSystemAlerts,
+  SAMPLE_DEMO_MEMBERS,
+  SAMPLE_DEMO_INSTRUCTORS
 } from '../data/mockData';
 
 export enum OperationType {
@@ -85,21 +87,37 @@ export function sanitizeDocId(id: string): string {
   return id.replace(/#/g, 'm_').replace(/[^a-zA-Z0-9_\-]/g, '_');
 }
 
-// Authentication
-const googleProvider = new GoogleAuthProvider();
+// Authentication & OAuth Token In-Memory Storage
+let cachedAccessToken: string | null = null;
 
-export async function loginWithGoogle(): Promise<User> {
+const googleProvider = new GoogleAuthProvider();
+// Workspace Scopes for Google Calendar
+googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+
+export async function loginWithGoogle(): Promise<{ user: User; accessToken: string | null }> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    cachedAccessToken = credential?.accessToken || null;
+    return { user: result.user, accessToken: cachedAccessToken };
   } catch (err) {
     console.error('Error during Google Sign-in:', err);
     throw err;
   }
 }
 
+export function getCachedAccessToken(): string | null {
+  return cachedAccessToken;
+}
+
+export function setCachedAccessToken(token: string | null): void {
+  cachedAccessToken = token;
+}
+
 export async function logoutUser(): Promise<void> {
   try {
+    cachedAccessToken = null;
     await signOut(auth);
   } catch (err) {
     console.error('Error during logout:', err);
@@ -108,7 +126,12 @@ export async function logoutUser(): Promise<void> {
 }
 
 export function subscribeToAuth(onUserChanged: (user: User | null) => void) {
-  return onAuthStateChanged(auth, onUserChanged);
+  return onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      cachedAccessToken = null;
+    }
+    onUserChanged(user);
+  });
 }
 
 // Subscriptions
@@ -250,6 +273,16 @@ export async function addMemberToFirestore(member: Member): Promise<void> {
   }
 }
 
+export async function deleteMemberFromFirestore(id: string): Promise<void> {
+  const docId = sanitizeDocId(id);
+  const path = `members/${docId}`;
+  try {
+    await deleteDoc(doc(db, 'members', docId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 export async function updateMemberStatusInFirestore(id: string, status: 'Activo' | 'Suspendido' | 'Pendiente'): Promise<void> {
   const docId = sanitizeDocId(id);
   const path = `members/${docId}`;
@@ -277,6 +310,16 @@ export async function updatePlanInFirestore(plan: PlanItem): Promise<void> {
     await setDoc(doc(db, 'plans', docId), plan);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function deletePlanFromFirestore(id: string): Promise<void> {
+  const docId = sanitizeDocId(id);
+  const path = `plans/${docId}`;
+  try {
+    await deleteDoc(doc(db, 'plans', docId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 
@@ -310,6 +353,16 @@ export async function addInstructorToFirestore(instructor: Instructor): Promise<
   }
 }
 
+export async function deleteInstructorFromFirestore(id: string): Promise<void> {
+  const docId = sanitizeDocId(id);
+  const path = `instructors/${docId}`;
+  try {
+    await deleteDoc(doc(db, 'instructors', docId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 export async function addAccessEventToFirestore(event: AccessEvent): Promise<void> {
   const docId = sanitizeDocId(event.id);
   const path = `accessEvents/${docId}`;
@@ -332,7 +385,7 @@ export interface MigrationSummary {
 }
 
 export async function checkFirestoreHasData(): Promise<boolean> {
-  const path = 'members';
+  const path = 'plans';
   try {
     const snap = await getDocs(collection(db, path));
     return !snap.empty;
@@ -342,58 +395,30 @@ export async function checkFirestoreHasData(): Promise<boolean> {
   }
 }
 
-export async function migrateMockDataToFirestore(
-  onProgress?: (step: string, percent: number) => void
-): Promise<MigrationSummary> {
-  try {
-    onProgress?.('Migrando Catálogo de Planes...', 15);
-    for (const p of initialPlans) {
-      const docId = sanitizeDocId(p.id);
-      await setDoc(doc(db, 'plans', docId), p);
-    }
-
-    onProgress?.('Migrando Terminales Edge ZKTeco...', 35);
-    for (const t of initialTerminals) {
-      const docId = sanitizeDocId(t.id);
-      await setDoc(doc(db, 'terminals', docId), t);
-    }
-
-    onProgress?.('Migrando Directorio de Miembros...', 55);
-    for (const m of initialMembers) {
-      const docId = sanitizeDocId(m.id);
-      await setDoc(doc(db, 'members', docId), m);
-    }
-
-    onProgress?.('Migrando Equipo de Instructores...', 75);
-    for (const inst of initialInstructors) {
-      const docId = sanitizeDocId(inst.id);
-      await setDoc(doc(db, 'instructors', docId), inst);
-    }
-
-    onProgress?.('Migrando Eventos de Auditoría de Accesos...', 90);
-    for (const ev of initialAccessEvents) {
-      const docId = sanitizeDocId(ev.id);
-      await setDoc(doc(db, 'accessEvents', docId), ev);
-    }
-
-    onProgress?.('Migrando Alertas Críticas del Sistema...', 98);
-    for (const alt of initialSystemAlerts) {
-      const docId = sanitizeDocId(alt.id);
-      await setDoc(doc(db, 'alerts', docId), alt);
-    }
-
-    onProgress?.('¡Migración a Firestore completada!', 100);
-
-    return {
-      membersCount: initialMembers.length,
-      plansCount: initialPlans.length,
-      terminalsCount: initialTerminals.length,
-      instructorsCount: initialInstructors.length,
-      eventsCount: initialAccessEvents.length,
-      alertsCount: initialSystemAlerts.length,
-      timestamp: new Date().toLocaleTimeString()
-    };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'bulk_migration');
+// Initializes standard catalogs (plans and terminals) in Firestore
+export async function initializeDefaultCatalogsInFirestore(): Promise<void> {
+  for (const p of initialPlans) {
+    const docId = sanitizeDocId(p.id);
+    await setDoc(doc(db, 'plans', docId), p);
   }
+  for (const t of initialTerminals) {
+    const docId = sanitizeDocId(t.id);
+    await setDoc(doc(db, 'terminals', docId), t);
+  }
+}
+
+// Optional: seed demo sample members and instructors for testing
+export async function loadDemoSampleDataToFirestore(): Promise<{ membersCount: number; instructorsCount: number }> {
+  for (const m of SAMPLE_DEMO_MEMBERS) {
+    const docId = sanitizeDocId(m.id);
+    await setDoc(doc(db, 'members', docId), m);
+  }
+  for (const inst of SAMPLE_DEMO_INSTRUCTORS) {
+    const docId = sanitizeDocId(inst.id);
+    await setDoc(doc(db, 'instructors', docId), inst);
+  }
+  return {
+    membersCount: SAMPLE_DEMO_MEMBERS.length,
+    instructorsCount: SAMPLE_DEMO_INSTRUCTORS.length
+  };
 }

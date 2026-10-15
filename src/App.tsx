@@ -47,6 +47,8 @@ import { SubscriptionsView } from './components/SubscriptionsView';
 import { AccessAuditView } from './components/AccessAuditView';
 import { TerminalsView } from './components/TerminalsView';
 import { InstructorsView } from './components/InstructorsView';
+import { GoogleCalendarView } from './components/GoogleCalendarView';
+import { GeminiAgentView } from './components/GeminiAgentView';
 import { CloudMigrationModal } from './components/CloudMigrationModal';
 
 import { 
@@ -69,7 +71,8 @@ import {
   Database,
   LogIn,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 
 export default function App() {
@@ -92,7 +95,7 @@ export default function App() {
   const [cloudNotification, setCloudNotification] = useState<string | null>(null);
   const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(false);
 
-  // App Data States
+  // App Data States (Clean defaults)
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [plans, setPlans] = useState<PlanItem[]>(initialPlans);
   const [terminals, setTerminals] = useState<TerminalDevice[]>(initialTerminals);
@@ -139,8 +142,8 @@ export default function App() {
     const unsubs: (() => void)[] = [];
 
     const unsubMembers = subscribeToMembers((liveMembers) => {
+      setMembers(liveMembers);
       if (liveMembers.length > 0) {
-        setMembers(liveMembers);
         setHasFirestoreData(true);
       }
       setIsSyncing(false);
@@ -158,17 +161,17 @@ export default function App() {
     unsubs.push(unsubTerminals);
 
     const unsubInstructors = subscribeToInstructors((liveInstructors) => {
-      if (liveInstructors.length > 0) setInstructors(liveInstructors);
+      setInstructors(liveInstructors);
     });
     unsubs.push(unsubInstructors);
 
     const unsubEvents = subscribeToAccessEvents((liveEvents) => {
-      if (liveEvents.length > 0) setAccessEvents(liveEvents);
+      setAccessEvents(liveEvents);
     });
     unsubs.push(unsubEvents);
 
     const unsubAlerts = subscribeToAlerts((liveAlerts) => {
-      if (liveAlerts.length > 0) setAlerts(liveAlerts);
+      setAlerts(liveAlerts);
     });
     unsubs.push(unsubAlerts);
 
@@ -180,9 +183,9 @@ export default function App() {
   // Auth Handlers
   const handleGoogleLogin = async () => {
     try {
-      const loggedUser = await loginWithGoogle();
+      const { user: loggedUser } = await loginWithGoogle();
       setUser(loggedUser);
-      setCloudNotification(`¡Sesión iniciada con Google! (${loggedUser.email}). Conectado a Firestore.`);
+      setCloudNotification(`¡Sesión iniciada con Google (${loggedUser.email})! Base de datos y Google Calendar listos.`);
       setTimeout(() => setCloudNotification(null), 4500);
     } catch (err) {
       console.error('Error in Google Login:', err);
@@ -223,8 +226,8 @@ export default function App() {
     setNewMemberName('');
     setNewMemberEmail('');
 
-    // Also create access event
-    const now = new Date().toTimeString().split(' ')[0];
+    // Also record access log
+    const now = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const newEvent: AccessEvent = {
       id: `ev-${Date.now()}`,
       time: now,
@@ -241,7 +244,7 @@ export default function App() {
       try {
         await addMemberToFirestore(newMember);
         await addAccessEventToFirestore(newEvent);
-        setCloudNotification(`Socio ${newMember.name} registrado en Cloud Firestore.`);
+        setCloudNotification(`Socio ${newMember.name} guardado en Cloud Firestore.`);
         setTimeout(() => setCloudNotification(null), 3500);
       } catch (err) {
         console.error('Error writing member to Firestore:', err);
@@ -259,21 +262,25 @@ export default function App() {
   };
 
   const handleUpdateMemberStatus = async (id: string, newStatus: 'Activo' | 'Suspendido') => {
-    setMembers(members.map(m => m.id === id ? { ...m, status: newStatus } : m));
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
     if (user) {
       try {
         await updateMemberStatusInFirestore(id, newStatus);
+        setCloudNotification(`Estatus de socio actualizado a: ${newStatus}`);
+        setTimeout(() => setCloudNotification(null), 3000);
       } catch (err) {
-        console.error('Error updating member in Firestore:', err);
+        console.error('Error updating status in Firestore:', err);
       }
     }
   };
 
   const handleUpdatePlan = async (updatedPlan: PlanItem) => {
-    setPlans(plans.map(p => p.id === updatedPlan.id ? updatedPlan : p));
+    setPlans(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p));
     if (user) {
       try {
         await updatePlanInFirestore(updatedPlan);
+        setCloudNotification(`Plan ${updatedPlan.name} actualizado en Firestore.`);
+        setTimeout(() => setCloudNotification(null), 3000);
       } catch (err) {
         console.error('Error updating plan in Firestore:', err);
       }
@@ -281,10 +288,12 @@ export default function App() {
   };
 
   const handleAddNewPlan = async (newPlan: PlanItem) => {
-    setPlans([...plans, newPlan]);
+    setPlans(prev => [...prev, newPlan]);
     if (user) {
       try {
         await addPlanToFirestore(newPlan);
+        setCloudNotification(`Nuevo plan ${newPlan.name} registrado en Firestore.`);
+        setTimeout(() => setCloudNotification(null), 3000);
       } catch (err) {
         console.error('Error adding plan to Firestore:', err);
       }
@@ -292,10 +301,12 @@ export default function App() {
   };
 
   const handleAddTerminal = async (newTerminal: TerminalDevice) => {
-    setTerminals([...terminals, newTerminal]);
+    setTerminals(prev => [...prev, newTerminal]);
     if (user) {
       try {
         await addTerminalToFirestore(newTerminal);
+        setCloudNotification(`Terminal ${newTerminal.name} vinculada en Firestore.`);
+        setTimeout(() => setCloudNotification(null), 3000);
       } catch (err) {
         console.error('Error adding terminal to Firestore:', err);
       }
@@ -303,31 +314,24 @@ export default function App() {
   };
 
   const handleRestartTerminal = async (id: string) => {
-    const updated = terminals.map(t => {
-      if (t.id === id) {
-        return { ...t, status: 'En línea' as const, lastPingMs: Math.floor(10 + Math.random() * 8) };
-      }
-      return t;
-    });
-    setTerminals(updated);
-
-    if (user) {
-      const target = updated.find(t => t.id === id);
-      if (target) {
-        try {
-          await updateTerminalInFirestore(target);
-        } catch (err) {
-          console.error('Error updating terminal in Firestore:', err);
-        }
+    setTerminals(prev => prev.map(t => t.id === id ? { ...t, status: 'En línea', lastPingMs: 12 } : t));
+    const term = terminals.find(t => t.id === id);
+    if (term && user) {
+      try {
+        await updateTerminalInFirestore({ ...term, status: 'En línea', lastPingMs: 12 });
+      } catch (err) {
+        console.error('Error updating terminal in Firestore:', err);
       }
     }
   };
 
-  const handleAddInstructor = async (newInst: Instructor) => {
-    setInstructors([...instructors, newInst]);
+  const handleAddInstructor = async (newInstructor: Instructor) => {
+    setInstructors(prev => [...prev, newInstructor]);
     if (user) {
       try {
-        await addInstructorToFirestore(newInst);
+        await addInstructorToFirestore(newInstructor);
+        setCloudNotification(`Instructor ${newInstructor.name} registrado en Firestore.`);
+        setTimeout(() => setCloudNotification(null), 3000);
       } catch (err) {
         console.error('Error adding instructor to Firestore:', err);
       }
@@ -335,7 +339,7 @@ export default function App() {
   };
 
   const handleAddSimulatedAccessEvent = async (ev: AccessEvent) => {
-    setAccessEvents([ev, ...accessEvents]);
+    setAccessEvents(prev => [ev, ...prev]);
     if (user) {
       try {
         await addAccessEventToFirestore(ev);
@@ -355,6 +359,9 @@ export default function App() {
             onOpenNewMember={() => setShowNewMemberModal(true)}
             onOpenReceipt={() => setShowReceiptModal(true)}
             alerts={alerts}
+            members={members}
+            plans={plans}
+            terminals={terminals}
           />
         );
       case 'ventas':
@@ -366,6 +373,25 @@ export default function App() {
             onOpenNewMember={() => setShowNewMemberModal(true)}
             onUpdateMemberStatus={handleUpdateMemberStatus}
             searchQuery={searchQuery}
+          />
+        );
+      case 'calendar':
+        return (
+          <GoogleCalendarView
+            user={user}
+            onLogin={handleGoogleLogin}
+            instructors={instructors}
+            onOpenGeminiOrganizer={() => setCurrentTab('gemini')}
+          />
+        );
+      case 'gemini':
+        return (
+          <GeminiAgentView
+            members={members}
+            plans={plans}
+            terminals={terminals}
+            instructors={instructors}
+            onNavigateToCalendar={() => setCurrentTab('calendar')}
           />
         );
       case 'suscripciones':
@@ -397,6 +423,7 @@ export default function App() {
           <InstructorsView
             instructors={instructors}
             onAddInstructor={handleAddInstructor}
+            onNavigateToCalendar={() => setCurrentTab('calendar')}
           />
         );
       default:
@@ -483,23 +510,23 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setCurrentTab('accesos')}
+                onClick={() => setCurrentTab('calendar')}
                 className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all ${
-                  currentTab === 'accesos' ? 'text-[#c3f400] font-bold' : 'text-[#c4c9ac] hover:text-[#eaddff]'
+                  currentTab === 'calendar' ? 'text-[#c3f400] font-bold' : 'text-[#c4c9ac] hover:text-[#eaddff]'
                 }`}
               >
-                <Fingerprint className="w-5 h-5" />
-                <span className="text-[10px] font-medium">Accesos</span>
+                <Calendar className="w-5 h-5" />
+                <span className="text-[10px] font-medium">Calendar</span>
               </button>
 
               <button
-                onClick={() => setCurrentTab('ventas')}
+                onClick={() => setCurrentTab('gemini')}
                 className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all ${
-                  currentTab === 'ventas' ? 'text-[#c3f400] font-bold' : 'text-[#c4c9ac] hover:text-[#eaddff]'
+                  currentTab === 'gemini' ? 'text-[#c3f400] font-bold' : 'text-[#c4c9ac] hover:text-[#eaddff]'
                 }`}
               >
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-[10px] font-medium">Ventas</span>
+                <Sparkles className="w-5 h-5 text-[#c3f400]" />
+                <span className="text-[10px] font-medium text-[#c3f400]">Gemini</span>
               </button>
 
               <button
@@ -530,22 +557,22 @@ export default function App() {
             {/* Header */}
             <Header
               onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-              isMobileExecutivePreview={isMobileExecutivePreview}
-              onToggleMobilePreview={() => setIsMobileExecutivePreview(!isMobileExecutivePreview)}
-              onQuickNewMember={() => setShowNewMemberModal(true)}
-              onQuickInvoice={() => setShowReceiptModal(true)}
-              alerts={alerts}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              onQuickNewMember={() => setShowNewMemberModal(true)}
+              onQuickInvoice={() => setShowReceiptModal(true)}
+              onToggleMobilePreview={() => setIsMobileExecutivePreview(!isMobileExecutivePreview)}
+              isMobileExecutivePreview={isMobileExecutivePreview}
               user={user}
               onLogin={handleGoogleLogin}
               onLogout={handleLogout}
               onOpenMigrationModal={() => setShowMigrationModal(true)}
               isSyncing={isSyncing}
+              alerts={alerts}
             />
 
             {/* Viewport Content */}
-            <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
+            <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto pb-24">
               {/* Executive Cloud Sync Banner */}
               {!user ? (
                 !isBannerDismissed && (
@@ -556,13 +583,13 @@ export default function App() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-headline text-sm text-white">Google Cloud Firestore Preparado</span>
+                          <span className="font-headline text-sm text-white">Google Cloud & Calendar Preparados</span>
                           <span className="px-2 py-0.5 rounded-full bg-[#140039] text-[#c3f400] text-[10px] font-mono font-bold border border-[#35007f]">
                             us-east1
                           </span>
                         </div>
                         <p className="text-xs text-[#c4c9ac] mt-1 max-w-2xl leading-relaxed">
-                          Conecta tu cuenta de Google de Administrador para sincronizar y migrar los socios, planes y terminales a la base de datos persistente.
+                          Conecta tu cuenta de Google de Administrador para sincronizar Firestore en vivo y agendar clases directamente en tu Google Calendar oficial.
                         </p>
                       </div>
                     </div>
@@ -579,7 +606,7 @@ export default function App() {
                         onClick={() => setShowMigrationModal(true)}
                         className="px-4 py-2.5 rounded-full bg-[#140039] hover:bg-[#24005b] text-[#eaddff] font-medium text-xs border border-[#35007f] active:scale-95 transition-all"
                       >
-                        Centro de Migración
+                        Base de Datos Cloud
                       </button>
                       <button
                         onClick={() => setIsBannerDismissed(true)}
@@ -597,10 +624,10 @@ export default function App() {
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#c3f400] animate-pulse shadow-[0_0_8px_#c3f400] shrink-0" />
                     <span className="text-white font-medium">
-                      Cloud Firestore en Vivo • <strong className="text-[#c3f400] font-mono">{user.email}</strong>
+                      Cloud Firestore & Calendar en Vivo • <strong className="text-[#c3f400] font-mono">{user.email}</strong>
                     </span>
                     <span className="text-[#c4c9ac] hidden md:inline">
-                      ({members.length} socios, {terminals.length} terminales, {accessEvents.length} accesos)
+                      ({members.length} socios, {terminals.length} terminales, {instructors.length} coaches)
                     </span>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
@@ -609,26 +636,39 @@ export default function App() {
                       className="text-xs text-[#c3f400] hover:underline font-semibold flex items-center gap-1.5"
                     >
                       <Database className="w-3.5 h-3.5" />
-                      <span>Administrar Migración a Firestore</span>
+                      <span>Configuración Cloud</span>
                     </button>
                   </div>
                 </div>
               )}
 
+              {/* View Rendering */}
               {renderCurrentView()}
             </main>
           </div>
         </div>
       )}
 
+      {/* Floating Gemini Agent Quick Access Button */}
+      {currentTab !== 'gemini' && (
+        <button
+          onClick={() => setCurrentTab('gemini')}
+          className="fixed bottom-6 right-6 z-40 bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_0_25px_rgba(195,244,0,0.4)] flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 group"
+          title="Abrir Agente Organizador Gemini"
+        >
+          <Sparkles className="w-5 h-5 text-[#161e00] animate-spin" style={{ animationDuration: '6s' }} />
+          <span className="hidden sm:inline">Agente Organizador AI</span>
+        </button>
+      )}
+
       {/* Modal: Registrar Nuevo Socio */}
       {showNewMemberModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#290065] border border-[#35007f] rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#290065] border border-[#35007f] rounded-[2.5rem] p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-start mb-5">
               <div>
                 <h3 className="text-xl font-headline text-white tracking-tight">Registrar Nuevo Socio</h3>
-                <p className="text-xs text-[#c4c9ac] mt-1">Genera la ficha administrativa y autoriza el enrolamiento biométrico.</p>
+                <p className="text-xs text-[#c4c9ac] mt-1">Genera la ficha administrativa y autoriza el enrolamiento biométrico en los tornos.</p>
               </div>
               <button
                 onClick={() => setShowNewMemberModal(false)}
@@ -640,14 +680,14 @@ export default function App() {
 
             <form onSubmit={handleCreateMember} className="space-y-4 text-xs">
               <div>
-                <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Nombre Completo</label>
+                <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Nombre Completo *</label>
                 <input
                   type="text"
                   required
                   placeholder="ej. Mariana Treviño"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-4 py-2.5 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all placeholder-[#c4c9ac]/50"
+                  className="w-full bg-[#140039] border border-[#35007f] rounded-2xl px-4 py-3 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all placeholder-[#c4c9ac]/50"
                 />
               </div>
 
@@ -658,7 +698,7 @@ export default function App() {
                   placeholder="mariana@ejemplo.com"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-4 py-2.5 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all placeholder-[#c4c9ac]/50"
+                  className="w-full bg-[#140039] border border-[#35007f] rounded-2xl px-4 py-3 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all placeholder-[#c4c9ac]/50"
                 />
               </div>
 
@@ -668,40 +708,40 @@ export default function App() {
                   <select
                     value={newMemberPlan}
                     onChange={(e) => setNewMemberPlan(e.target.value)}
-                    className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-3 py-2.5 text-white text-xs focus:border-[#c3f400] focus:outline-none transition-all"
+                    className="w-full bg-[#140039] border border-[#35007f] rounded-2xl px-3 py-3 text-white text-xs focus:border-[#c3f400] focus:outline-none transition-all"
                   >
-                    <option value="Base Neón">Base Neón ($899/m)</option>
-                    <option value="Trimestral Héroe">Trimestral Héroe ($2,399)</option>
-                    <option value="Titanio Pro">Titanio Pro ($7,999/a)</option>
+                    {plans.map(p => (
+                      <option key={p.id} value={p.name}>{p.name} (${p.price})</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Biometría</label>
+                  <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Biometría Facial</label>
                   <select
                     value={newMemberBio}
                     onChange={(e) => setNewMemberBio(e.target.value as any)}
-                    className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-3 py-2.5 text-white text-xs focus:border-[#c3f400] focus:outline-none transition-all"
+                    className="w-full bg-[#140039] border border-[#35007f] rounded-2xl px-3 py-3 text-white text-xs focus:border-[#c3f400] focus:outline-none transition-all"
                   >
-                    <option value="Registrada">Enrolar Inmediato (OK)</option>
-                    <option value="Pendiente">Pendiente en Torniquete</option>
+                    <option value="Registrada">Registrada (Inmediata)</option>
+                    <option value="Pendiente">Pendiente en Torno</option>
                   </select>
                 </div>
               </div>
 
-              <div className="pt-4 flex items-center gap-3">
+              <div className="pt-4 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowNewMemberModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#35007f] hover:bg-[#42009b] text-[#eaddff] text-xs font-semibold transition-colors"
+                  className="px-5 py-2.5 rounded-full bg-[#140039] hover:bg-[#35007f] text-[#eaddff] font-medium transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#c3f400] text-[#161e00] text-xs font-bold uppercase tracking-wider hover:bg-[#abd600] transition-colors shadow-[0_0_15px_rgba(195,244,0,0.3)]"
+                  className="px-6 py-2.5 rounded-full bg-[#c3f400] text-[#161e00] font-bold shadow-[0_0_15px_rgba(195,244,0,0.3)] hover:bg-[#abd600] active:scale-95 transition-all"
                 >
-                  Dar de Alta
+                  Confirmar Alta
                 </button>
               </div>
             </form>
@@ -709,14 +749,19 @@ export default function App() {
         </div>
       )}
 
-      {/* Modal: Facturar / Comprobante */}
+      {/* Modal: Facturación / Comprobante */}
       {showReceiptModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#290065] border border-[#35007f] rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#290065] border border-[#35007f] rounded-[2.5rem] p-6 md:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-start mb-5">
-              <div>
-                <h3 className="text-xl font-headline text-white tracking-tight">Facturación &amp; Comprobante</h3>
-                <p className="text-xs text-[#c4c9ac] mt-1">Genera recibo digital timbrado con notificación al socio.</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#c3f400] text-[#161e00] flex items-center justify-center font-bold">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-headline text-white tracking-tight">Emisión de Factura / Cobro</h3>
+                  <p className="text-xs text-[#c4c9ac]">Caja y Conciliación Administrativa</p>
+                </div>
               </div>
               <button
                 onClick={() => setShowReceiptModal(false)}
@@ -727,62 +772,64 @@ export default function App() {
             </div>
 
             {receiptSuccess ? (
-              <div className="py-8 flex flex-col items-center justify-center gap-3 text-center">
-                <CheckCircle2 className="w-12 h-12 text-[#c3f400] animate-bounce" />
-                <h4 className="text-lg font-headline text-white">¡Comprobante Emitido!</h4>
-                <p className="text-xs text-[#c4c9ac]">
-                  Se envió copia digital a la app móvil del socio y correo fiscal.
-                </p>
+              <div className="py-8 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#c3f400]/20 text-[#c3f400] flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-base font-bold text-white">¡Cobro y Factura Procesados!</h4>
+                <p className="text-xs text-[#c4c9ac]">Acceso y membresía regularizados de inmediato.</p>
               </div>
             ) : (
-              <form onSubmit={handleCreateReceipt} className="space-y-4 text-xs">
+              <form onSubmit={handleCreateReceipt} className="space-y-4 text-xs font-body">
                 <div>
-                  <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">ID / Nombre de Socio</label>
+                  <label className="text-[#c4c9ac] font-semibold block mb-1 uppercase tracking-wider text-[10px]">Identificador de Socio o Nombre</label>
                   <input
                     type="text"
+                    required
                     value={receiptMemberId}
                     onChange={(e) => setReceiptMemberId(e.target.value)}
-                    className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-4 py-2.5 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all font-mono"
+                    className="w-full bg-[#140039] border border-[#35007f] rounded-2xl p-3 text-white focus:border-[#c3f400] outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Monto (MXN)</label>
-                    <input
-                      type="number"
-                      value={receiptAmount}
-                      onChange={(e) => setReceiptAmount(e.target.value)}
-                      className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-4 py-2.5 text-white text-sm focus:border-[#c3f400] focus:outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[#c4c9ac] font-semibold block mb-1.5 uppercase text-[10px] tracking-wider">Método de Pago</label>
-                    <select
-                      value={receiptMethod}
-                      onChange={(e) => setReceiptMethod(e.target.value)}
-                      className="w-full bg-[#140039] border border-[#35007f] rounded-xl px-3 py-2.5 text-white text-xs focus:border-[#c3f400] focus:outline-none transition-all"
-                    >
-                      <option value="Tarjeta">Tarjeta Débito/Crédito</option>
-                      <option value="Efectivo">Efectivo en Caja</option>
-                      <option value="SPEI">Transferencia SPEI</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="text-[#c4c9ac] font-semibold block mb-1 uppercase tracking-wider text-[10px]">Monto a Facturar (MXN)</label>
+                  <input
+                    type="number"
+                    required
+                    value={receiptAmount}
+                    onChange={(e) => setReceiptAmount(e.target.value)}
+                    className="w-full bg-[#140039] border border-[#35007f] rounded-2xl p-3 text-white focus:border-[#c3f400] outline-none text-base font-mono font-bold"
+                  />
                 </div>
 
-                <div className="pt-4 flex items-center gap-3">
+                <div>
+                  <label className="text-[#c4c9ac] font-semibold block mb-1 uppercase tracking-wider text-[10px]">Método de Pago</label>
+                  <select
+                    value={receiptMethod}
+                    onChange={(e) => setReceiptMethod(e.target.value)}
+                    className="w-full bg-[#140039] border border-[#35007f] rounded-2xl p-3 text-white focus:border-[#c3f400] outline-none"
+                  >
+                    <option value="Tarjeta de Débito / Terminal">Tarjeta de Débito / Terminal</option>
+                    <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                    <option value="Transferencia SPEI">Transferencia SPEI</option>
+                    <option value="Efectivo en Recepción">Efectivo en Recepción</option>
+                  </select>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setShowReceiptModal(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#35007f] hover:bg-[#42009b] text-[#eaddff] text-xs font-semibold transition-colors"
+                    className="px-5 py-2.5 rounded-full bg-[#140039] hover:bg-[#35007f] text-[#eaddff] font-medium transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-[#c3f400] text-[#161e00] text-xs font-bold uppercase tracking-wider hover:bg-[#abd600] transition-colors shadow-[0_0_15px_rgba(195,244,0,0.3)]"
+                    className="px-6 py-2.5 rounded-full bg-[#c3f400] text-[#161e00] font-bold shadow-[0_0_15px_rgba(195,244,0,0.3)] hover:bg-[#abd600] active:scale-95 transition-all"
                   >
-                    Emitir Recibo
+                    Emitir y Desbloquear
                   </button>
                 </div>
               </form>
@@ -791,7 +838,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Modal: Centro de Migración Cloud Firestore */}
+      {/* Modal: Centro de Base de Datos Cloud Firestore */}
       <CloudMigrationModal
         isOpen={showMigrationModal}
         onClose={() => setShowMigrationModal(false)}
@@ -799,23 +846,15 @@ export default function App() {
         onLogin={handleGoogleLogin}
         onMigrationComplete={() => {
           setHasFirestoreData(true);
-          setCloudNotification('¡Base de datos migrada a Firestore con éxito!');
-          setTimeout(() => setCloudNotification(null), 4000);
         }}
         isCloudConnected={isCloudConnected}
       />
 
-      {/* Floating Cloud Notification Toast */}
+      {/* Floating System Notification Toast */}
       {cloudNotification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#290065] border border-[#c3f400] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
-          <Sparkles className="w-5 h-5 text-[#c3f400] shrink-0" />
-          <span className="text-xs font-medium">{cloudNotification}</span>
-          <button
-            onClick={() => setCloudNotification(null)}
-            className="text-[#c4c9ac] hover:text-white ml-2 p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="fixed bottom-6 left-6 z-50 bg-[#24005b] border border-[#c3f400] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom duration-300">
+          <CheckCircle2 className="w-5 h-5 text-[#c3f400] shrink-0" />
+          <p className="text-xs font-semibold">{cloudNotification}</p>
         </div>
       )}
     </div>

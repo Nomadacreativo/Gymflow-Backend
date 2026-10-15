@@ -5,14 +5,16 @@ export type NavigationTab =
   | 'suscripciones'
   | 'accesos'
   | 'terminales'
-  | 'instructores';
+  | 'instructores'
+  | 'calendar'
+  | 'gemini';
 
 export interface Member {
   id: string;
   name: string;
   email: string;
   avatar?: string;
-  plan: 'Titanio Pro' | 'Carbono Élite' | 'Base Neón' | 'Trimestral Héroe';
+  plan: 'Titanio Pro' | 'Carbono Élite' | 'Base Neón' | 'Trimestral Héroe' | string;
   renewalDate: string;
   bioStatus: 'Registrada' | 'Pendiente';
   lastAccess: string;
@@ -112,4 +114,45 @@ export interface SystemAlert {
   actionText?: string;
   severity: 'error' | 'warning' | 'info';
   timestamp: string;
+}
+
+// Google Calendar Event Interface
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  location?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  attendees?: {
+    email: string;
+    displayName?: string;
+    responseStatus?: string;
+  }[];
+  htmlLink?: string;
+  eventType?: 'class' | 'personal_training' | 'assessment' | 'maintenance' | 'other';
+}
+
+// Gemini Agent message interface
+export interface GeminiChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: string;
+  suggestions?: string[];
+  calendarProposal?: {
+    title: string;
+    startDateTime: string;
+    endDateTime: string;
+    location: string;
+    description: string;
+  };
 }
