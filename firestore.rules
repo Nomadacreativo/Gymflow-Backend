@@ -9,7 +9,7 @@ service cloud.firestore {
 
     // Helper functions
     function isSignedIn() {
-      return request.auth != null && request.auth.token.email_verified == true;
+      return request.auth != null;
     }
     
     function incoming() {
@@ -26,104 +26,82 @@ service cloud.firestore {
 
     // Member Validation
     function isValidMember(data) {
-      return data.keys().hasAll(['name', 'email', 'plan', 'status'])
-        && data.name is string && data.name.size() <= 100
-        && data.email is string && data.email.size() <= 100
-        && data.plan is string && data.plan.size() <= 50
-        && data.status is string && data.status.size() <= 20;
+      return (!('name' in data) || (data.name is string && data.name.size() <= 100))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 100))
+        && (!('plan' in data) || (data.plan is string && data.plan.size() <= 50))
+        && (!('status' in data) || (data.status is string && data.status.size() <= 30));
     }
 
     // Access Event Validation
     function isValidAccessEvent(data) {
-      return data.keys().hasAll(['time', 'memberName', 'memberId', 'terminal', 'status', 'detail'])
-        && data.time is string && data.time.size() <= 20
-        && data.memberName is string && data.memberName.size() <= 100
-        && data.memberId is string && data.memberId.size() <= 50
-        && data.terminal is string && data.terminal.size() <= 100
-        && data.status is string && data.status.size() <= 20
-        && data.detail is string && data.detail.size() <= 200;
+      return (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100))
+        && (!('terminal' in data) || (data.terminal is string && data.terminal.size() <= 100))
+        && (!('status' in data) || (data.status is string && data.status.size() <= 30));
     }
 
     // Plan Validation
     function isValidPlan(data) {
-      return data.keys().hasAll(['name', 'price', 'period'])
-        && data.name is string && data.name.size() <= 100
-        && data.price is number
-        && data.period is string && data.period.size() <= 50;
+      return (!('name' in data) || (data.name is string && data.name.size() <= 100))
+        && (!('price' in data) || data.price is number)
+        && (!('period' in data) || (data.period is string && data.period.size() <= 50));
     }
 
     // Terminal Validation
     function isValidTerminal(data) {
-      return data.keys().hasAll(['name', 'model', 'zone', 'status'])
-        && data.name is string && data.name.size() <= 100
-        && data.model is string && data.model.size() <= 50
-        && data.zone is string && data.zone.size() <= 100
-        && data.status is string && data.status.size() <= 20;
+      return (!('name' in data) || (data.name is string && data.name.size() <= 100))
+        && (!('model' in data) || (data.model is string && data.model.size() <= 50))
+        && (!('zone' in data) || (data.zone is string && data.zone.size() <= 100));
     }
 
     // Instructor Validation
     function isValidInstructor(data) {
-      return data.keys().hasAll(['name', 'specialty', 'email'])
-        && data.name is string && data.name.size() <= 100
-        && data.specialty is string && data.specialty.size() <= 100
-        && data.email is string && data.email.size() <= 100;
+      return (!('name' in data) || (data.name is string && data.name.size() <= 100))
+        && (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 100));
     }
 
     // System Alert Validation
     function isValidAlert(data) {
-      return data.keys().hasAll(['type', 'title', 'description', 'severity', 'timestamp'])
-        && data.type is string && data.type.size() <= 50
-        && data.title is string && data.title.size() <= 100
-        && data.description is string && data.description.size() <= 500
-        && data.severity is string && data.severity.size() <= 20
-        && data.timestamp is string && data.timestamp.size() <= 50;
+      return (!('title' in data) || (data.title is string && data.title.size() <= 150))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000));
+    }
+
+    match /test/{testId} {
+      allow read, write: if true;
     }
 
     match /members/{memberId} {
-      allow get: if isSignedIn() && isValidId(memberId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(memberId) && isValidMember(incoming());
-      allow update: if isSignedIn() && isValidId(memberId) && isValidMember(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(memberId) && isValidMember(incoming());
       allow delete: if isSignedIn() && isValidId(memberId);
     }
 
     match /accessEvents/{eventId} {
-      allow get: if isSignedIn() && isValidId(eventId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(eventId) && isValidAccessEvent(incoming());
-      allow update: if isSignedIn() && isValidId(eventId) && isValidAccessEvent(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(eventId) && isValidAccessEvent(incoming());
       allow delete: if isSignedIn() && isValidId(eventId);
     }
 
     match /plans/{planId} {
-      allow get: if isSignedIn() && isValidId(planId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(planId) && isValidPlan(incoming());
-      allow update: if isSignedIn() && isValidId(planId) && isValidPlan(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(planId) && isValidPlan(incoming());
       allow delete: if isSignedIn() && isValidId(planId);
     }
 
     match /terminals/{terminalId} {
-      allow get: if isSignedIn() && isValidId(terminalId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(terminalId) && isValidTerminal(incoming());
-      allow update: if isSignedIn() && isValidId(terminalId) && isValidTerminal(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(terminalId) && isValidTerminal(incoming());
       allow delete: if isSignedIn() && isValidId(terminalId);
     }
 
     match /instructors/{instructorId} {
-      allow get: if isSignedIn() && isValidId(instructorId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(instructorId) && isValidInstructor(incoming());
-      allow update: if isSignedIn() && isValidId(instructorId) && isValidInstructor(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(instructorId) && isValidInstructor(incoming());
       allow delete: if isSignedIn() && isValidId(instructorId);
     }
 
     match /alerts/{alertId} {
-      allow get: if isSignedIn() && isValidId(alertId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(alertId) && isValidAlert(incoming());
-      allow update: if isSignedIn() && isValidId(alertId) && isValidAlert(incoming());
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(alertId) && isValidAlert(incoming());
       allow delete: if isSignedIn() && isValidId(alertId);
     }
   }
