@@ -573,23 +573,23 @@ export default function App() {
 
             {/* Viewport Content */}
             <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto pb-24">
-              {/* Executive Cloud Sync Banner */}
+              {/* Executive System & Edge Connector Sync Banner */}
               {!user ? (
                 !isBannerDismissed && (
                   <div className="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#24005b] to-[#290065] border border-[#35007f] shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 relative group">
                     <div className="flex items-start sm:items-center gap-3.5 pr-8 lg:pr-0">
-                      <div className="w-11 h-11 rounded-2xl bg-[#35007f] text-[#c3f400] flex items-center justify-center shrink-0 border border-[#42009b] shadow-[0_0_15px_rgba(195,244,0,0.15)]">
-                        <Cloud className="w-5 h-5" />
+                      <div className="w-11 h-11 rounded-2xl bg-[#35007f] text-[#00E676] flex items-center justify-center shrink-0 border border-[#42009b] shadow-[0_0_15px_rgba(0,230,118,0.2)]">
+                        <Server className="w-5 h-5" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-headline text-sm text-white">Google Cloud & Calendar Preparados</span>
-                          <span className="px-2 py-0.5 rounded-full bg-[#140039] text-[#c3f400] text-[10px] font-mono font-bold border border-[#35007f]">
-                            us-east1
+                          <span className="font-headline text-sm text-white">Sincronización NestJS & PostgreSQL</span>
+                          <span className="px-2 py-0.5 rounded-full bg-[#140039] text-[#00E676] text-[10px] font-mono font-bold border border-[#00E676]/30">
+                            LAN ACTIVA • ZKTeco
                           </span>
                         </div>
                         <p className="text-xs text-[#c4c9ac] mt-1 max-w-2xl leading-relaxed">
-                          Conecta tu cuenta de Google de Administrador para sincronizar Firestore en vivo y agendar clases directamente en tu Google Calendar oficial.
+                          Sincronización activa con API NestJS, base de datos PostgreSQL y Edge Connector LAN para terminales ZKTeco.
                         </p>
                       </div>
                     </div>
@@ -606,7 +606,7 @@ export default function App() {
                         onClick={() => setShowMigrationModal(true)}
                         className="px-4 py-2.5 rounded-full bg-[#140039] hover:bg-[#24005b] text-[#eaddff] font-medium text-xs border border-[#35007f] active:scale-95 transition-all"
                       >
-                        Base de Datos Cloud
+                        Base de Datos PostgreSQL
                       </button>
                       <button
                         onClick={() => setIsBannerDismissed(true)}
@@ -620,23 +620,23 @@ export default function App() {
                   </div>
                 )
               ) : (
-                <div className="mb-6 p-3.5 sm:p-4 rounded-2xl bg-[#24005b]/80 border border-[#c3f400]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
+                <div className="mb-6 p-3.5 sm:p-4 rounded-2xl bg-[#24005b]/80 border border-[#00E676]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md">
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#c3f400] animate-pulse shadow-[0_0_8px_#c3f400] shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#00E676] animate-pulse shadow-[0_0_8px_#00E676] shrink-0" />
                     <span className="text-white font-medium">
-                      Cloud Firestore & Calendar en Vivo • <strong className="text-[#c3f400] font-mono">{user.email}</strong>
+                      API NestJS, PostgreSQL & Google Calendar en Vivo • <strong className="text-[#c3f400] font-mono">{user.email}</strong>
                     </span>
                     <span className="text-[#c4c9ac] hidden md:inline">
-                      ({members.length} socios, {terminals.length} terminales, {instructors.length} coaches)
+                      ({members.length} socios, {terminals.length} terminales ZKTeco, {instructors.length} coaches)
                     </span>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                     <button
                       onClick={() => setShowMigrationModal(true)}
-                      className="text-xs text-[#c3f400] hover:underline font-semibold flex items-center gap-1.5"
+                      className="text-xs text-[#00E676] hover:underline font-semibold flex items-center gap-1.5"
                     >
                       <Database className="w-3.5 h-3.5" />
-                      <span>Configuración Cloud</span>
+                      <span>Gestor PostgreSQL & LAN</span>
                     </button>
                   </div>
                 </div>

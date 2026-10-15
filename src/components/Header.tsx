@@ -90,26 +90,26 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right controls */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* Cloud Firestore Status & Migration Trigger Button */}
+        {/* Database & Edge Status Trigger Button */}
         <button
           onClick={onOpenMigrationModal}
-          title="Gestión de Datos y Sincronización en la Nube (Firebase Firestore)"
+          title="Gestión de Datos y Sincronización (API NestJS / PostgreSQL)"
           className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
             user
-              ? 'bg-[#290065] border-[#c3f400]/40 text-[#c3f400] hover:bg-[#35007f]'
-              : 'bg-[#290065] border-[#ffb4ab]/40 text-[#ffb4ab] hover:bg-[#35007f]'
+              ? 'bg-[#290065] border-[#00E676]/40 text-[#00E676] hover:bg-[#35007f]'
+              : 'bg-[#290065] border-[#35007f] text-[#c4c9ac] hover:bg-[#35007f]'
           }`}
         >
           {isSyncing ? (
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#c3f400]" />
           ) : (
-            <Cloud className={`w-3.5 h-3.5 ${user ? 'text-[#c3f400]' : 'text-[#ffb4ab]'}`} />
+            <Database className={`w-3.5 h-3.5 ${user ? 'text-[#00E676]' : 'text-[#c4c9ac]'}`} />
           )}
           <span className="hidden xl:inline">
-            {user ? 'Firestore: Conectado' : 'Nube: Sin Sesión'}
+            {user ? 'PostgreSQL: En línea' : 'Servidor Local'}
           </span>
           <span className="text-[10px] bg-[#140039] px-2 py-0.5 rounded-full text-white font-mono">
-            Migrar
+            LAN
           </span>
         </button>
 
@@ -240,8 +240,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="pb-3 border-b border-[#35007f]">
                     <p className="text-xs font-bold text-white truncate">{user.displayName || 'Administrador'}</p>
                     <p className="text-[11px] text-[#c4c9ac] truncate mt-0.5">{user.email}</p>
-                    <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-[#c3f400]/20 text-[#c3f400] text-[10px] font-mono">
-                      Firebase: us-east1
+                    <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-[#00E676]/20 text-[#00E676] text-[10px] font-mono border border-[#00E676]/30">
+                      PostgreSQL: Conectado
                     </span>
                   </div>
                   <div className="pt-3 space-y-2">
@@ -252,8 +252,8 @@ export const Header: React.FC<HeaderProps> = ({
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[#35007f] hover:bg-[#42009b] text-white text-xs transition-colors"
                     >
-                      <Database className="w-3.5 h-3.5 text-[#c3f400]" />
-                      <span>Sincronizar Firestore</span>
+                      <Database className="w-3.5 h-3.5 text-[#00E676]" />
+                      <span>Sincronizar PostgreSQL</span>
                     </button>
                     <button
                       onClick={() => {
@@ -269,15 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
-          ) : (
-            <button
-              onClick={onLogin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] font-bold text-xs transition-all shadow-[0_0_15px_rgba(195,244,0,0.3)] shrink-0"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline sm:inline">Google</span>
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

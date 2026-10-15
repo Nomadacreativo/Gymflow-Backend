@@ -55,11 +55,11 @@ export const CloudMigrationModal: React.FC<CloudMigrationModalProps> = ({
 
     try {
       await initializeDefaultCatalogsInFirestore();
-      setActionMessage('¡Catálogos de Planes y Terminales ZKTeco inicializados en Cloud Firestore! Tu base de datos está lista para nuevos registros reales.');
+      setActionMessage('¡Catálogos de Planes y Terminales ZKTeco inicializados en PostgreSQL! La base de datos está lista para nuevos registros reales.');
       onMigrationComplete();
     } catch (err: any) {
       console.error('Initialization error:', err);
-      setErrorMessage(err.message || 'Error inicializando catálogos en Firestore');
+      setErrorMessage(err.message || 'Error inicializando catálogos en PostgreSQL');
     } finally {
       setIsProcessing(false);
     }
@@ -77,11 +77,11 @@ export const CloudMigrationModal: React.FC<CloudMigrationModalProps> = ({
 
     try {
       const res = await loadDemoSampleDataToFirestore();
-      setActionMessage(`¡Se cargaron ${res.membersCount} socios y ${res.instructorsCount} coaches de prueba en Cloud Firestore para evaluación!`);
+      setActionMessage(`¡Se cargaron ${res.membersCount} socios y ${res.instructorsCount} coaches de prueba en PostgreSQL para evaluación!`);
       onMigrationComplete();
     } catch (err: any) {
       console.error('Demo data error:', err);
-      setErrorMessage(err.message || 'Error cargando datos demo en Firestore');
+      setErrorMessage(err.message || 'Error cargando datos demo en PostgreSQL');
     } finally {
       setIsProcessing(false);
     }
@@ -97,8 +97,8 @@ export const CloudMigrationModal: React.FC<CloudMigrationModalProps> = ({
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-headline text-white tracking-tight">Centro de Base de Datos Cloud Firestore</h3>
-              <p className="text-xs text-[#c4c9ac]">Sincronización persistente en Google Cloud (us-east1)</p>
+              <h3 className="text-lg font-headline text-white tracking-tight">Centro de Datos NestJS & PostgreSQL</h3>
+              <p className="text-xs text-[#c4c9ac]">Sincronización persistente y Edge Connector LAN ZKTeco</p>
             </div>
           </div>
           <button
@@ -112,18 +112,18 @@ export const CloudMigrationModal: React.FC<CloudMigrationModalProps> = ({
         {/* Cloud Info Bar */}
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
           <div className="p-3 rounded-2xl bg-[#140039] border border-[#35007f]/60">
-            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Proyecto GCP</span>
-            <span className="text-white font-mono text-[11px] truncate block mt-0.5">gen-lang-client-0329551847</span>
+            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Backend API</span>
+            <span className="text-white font-mono text-[11px] truncate block mt-0.5">NestJS Core (Puerto 3000)</span>
           </div>
           <div className="p-3 rounded-2xl bg-[#140039] border border-[#35007f]/60">
-            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Región Firestore</span>
-            <span className="text-[#c3f400] font-mono text-[11px] block mt-0.5">us-east1 (Iowa)</span>
+            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Base de Datos</span>
+            <span className="text-[#c3f400] font-mono text-[11px] block mt-0.5">PostgreSQL (Local / Cloud)</span>
           </div>
           <div className="p-3 rounded-2xl bg-[#140039] border border-[#35007f]/60 col-span-2 sm:col-span-1">
-            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Estado DB</span>
-            <span className="text-[#c3f400] font-bold text-[11px] flex items-center gap-1 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-[#c3f400] animate-pulse" />
-              Online
+            <span className="text-[10px] text-[#c4c9ac] block uppercase tracking-wider font-semibold">Edge LAN ZKTeco</span>
+            <span className="text-[#00E676] font-bold text-[11px] flex items-center gap-1 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" />
+              Sincronizado
             </span>
           </div>
         </div>
@@ -184,7 +184,7 @@ export const CloudMigrationModal: React.FC<CloudMigrationModalProps> = ({
             Configuración para Producción
           </p>
           <p className="text-[#c4c9ac] leading-relaxed">
-            Por defecto, el padrón de socios inicia limpio para que puedas realizar tus registros reales. Puedes inicializar los planes y terminales base en la nube, o cargar datos demo de muestra para pruebas.
+            Por defecto, el padrón de socios inicia limpio para que puedas realizar tus registros reales. Puedes inicializar los planes y terminales base en PostgreSQL, o cargar datos demo de muestra para pruebas.
           </p>
         </div>
 
