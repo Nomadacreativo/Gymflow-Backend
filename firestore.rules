@@ -1,13 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Global Default Deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
 
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -82,13 +76,13 @@ service cloud.firestore {
     }
 
     match /plans/{planId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update: if isSignedIn() && isValidId(planId) && isValidPlan(incoming());
       allow delete: if isSignedIn() && isValidId(planId);
     }
 
     match /terminals/{terminalId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update: if isSignedIn() && isValidId(terminalId) && isValidTerminal(incoming());
       allow delete: if isSignedIn() && isValidId(terminalId);
     }
@@ -103,6 +97,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn() && isValidId(alertId) && isValidAlert(incoming());
       allow delete: if isSignedIn() && isValidId(alertId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-remixgymflowback-a12d011b-b552-4458-9f78-b1783bb32c14",
+      "rules": "firestore.rules"
+    }
+  ]
+}
