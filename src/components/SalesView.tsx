@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MRRDashboard } from './MRRDashboard';
 import { 
   TrendingUp, 
   Calendar, 
@@ -151,81 +152,11 @@ export const SalesView: React.FC = () => {
         </div>
       </section>
 
-      {/* Main Visualizations: Proyecciones a 6 meses & Embudo */}
+      {/* Sección Analítica Recharts: MRRDashboard de los últimos 6 meses */}
+      <MRRDashboard />
+
+      {/* Visualizaciones Secundarias: Embudo y Retención */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Proyección MRR (Spans 2 cols) */}
-        <div className="lg:col-span-2 bg-[#290065] rounded-3xl p-6 md:p-8 border border-[#35007f]/60 shadow-xl flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-[#c3f400] font-bold block mb-1">
-                Tendencia & Modelo
-              </span>
-              <h3 className="font-headline text-xl text-white tracking-tight">Proyección MRR (6 Meses)</h3>
-              <p className="text-xs text-[#c4c9ac] mt-0.5">Análisis predictivo de ingresos recurrentes y estacionalidad de suscripciones</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-[#140039] rounded-full text-xs text-[#c4c9ac] flex items-center gap-1.5 font-medium border border-[#35007f]">
-                <span className="w-2 h-2 rounded-full bg-[#c4c9ac]" /> Real
-              </span>
-              <span className="px-3 py-1 bg-[#c3f400]/15 text-[#c3f400] border border-[#c3f400]/40 rounded-full text-xs flex items-center gap-1.5 font-bold">
-                <span className="w-2 h-2 rounded-full bg-[#c3f400] animate-pulse" /> Proyectado
-              </span>
-            </div>
-          </div>
-
-          {/* SVG Area & Lines Chart */}
-          <div className="w-full h-64 md:h-72 relative mt-4">
-            <svg className="w-full h-full" viewBox="0 0 800 300" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="areaRealGradNoir" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#35007f" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="#35007f" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="areaProjGradNoir" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#c3f400" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#c3f400" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              {/* Grid Lines */}
-              <path d="M0,250 L800,250 M0,187.5 L800,187.5 M0,125 L800,125 M0,62.5 L800,62.5" stroke="#35007f" strokeDasharray="4 4" strokeWidth="1" />
-
-              {/* Real Data Area */}
-              <path d="M0,250 L0,200 L100,180 L200,210 L300,150 L400,160 L400,250 Z" fill="url(#areaRealGradNoir)" />
-              <path d="M0,200 L100,180 L200,210 L300,150 L400,160" fill="none" stroke="#c4c9ac" strokeWidth="2.5" />
-
-              {/* Projected Data Area */}
-              <path d="M400,250 L400,160 L500,130 L600,90 L700,100 L800,50 L800,250 Z" fill="url(#areaProjGradNoir)" />
-              <path d="M400,160 L500,130 L600,90 L700,100 L800,50" fill="none" stroke="#c3f400" strokeDasharray="6 4" strokeWidth="2.5" />
-
-              {/* Data Points */}
-              <circle cx="0" cy="200" r="3.5" fill="#c4c9ac" />
-              <circle cx="100" cy="180" r="3.5" fill="#c4c9ac" />
-              <circle cx="200" cy="210" r="3.5" fill="#c4c9ac" />
-              <circle cx="300" cy="150" r="3.5" fill="#c4c9ac" />
-              <circle cx="400" cy="160" r="4.5" fill="#c3f400" />
-              <circle cx="500" cy="130" r="4.5" fill="#c3f400" />
-              <circle cx="600" cy="90" r="4.5" fill="#c3f400" />
-              <circle cx="700" cy="100" r="4.5" fill="#c3f400" />
-              <circle cx="800" cy="50" r="5.5" fill="#c3f400" />
-            </svg>
-
-            {/* X-Axis labels */}
-            <div className="flex justify-between w-full text-xs text-[#c4c9ac] pt-3 border-t border-[#35007f] font-medium">
-              <span>May</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Ago</span>
-              <span className="text-white font-bold">Sep ($38.2k)</span>
-              <span>Oct</span>
-              <span>Nov</span>
-              <span>Dic</span>
-              <span className="text-[#c3f400] font-bold">Ene ($45.2k)</span>
-            </div>
-          </div>
-        </div>
-
         {/* Conversión de Embudo */}
         <div className="bg-[#290065] rounded-3xl p-6 md:p-8 border border-[#35007f]/60 shadow-xl flex flex-col justify-between">
           <div>

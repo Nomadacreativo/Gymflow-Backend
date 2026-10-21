@@ -16,8 +16,10 @@ import {
   CreditCard,
   Sparkles,
   Activity,
-  Plus
+  Plus,
+  BarChart3
 } from 'lucide-react';
+import { MRRDashboard } from './MRRDashboard';
 import { SystemAlert, NavigationTab, Member, PlanItem, TerminalDevice } from '../types';
 
 interface DashboardViewProps {
@@ -45,6 +47,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   // Toggle: Datos Demo vs Estado Cero
   const [dataMode, setDataMode] = useState<'demo' | 'zero'>('demo');
+  const [chartViewMode, setChartViewMode] = useState<'flujo' | 'mrr6m'>('flujo');
   const [chartPeriod, setChartPeriod] = useState<'Mensual' | 'Trimestral'>('Mensual');
   const [edgeRestarting, setEdgeRestarting] = useState(false);
   const [edgeStatus, setEdgeStatus] = useState<'offline' | 'online'>('online');
@@ -230,36 +233,69 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
               </div>
 
-              {/* Controles de Periodicidad */}
+              {/* Controles de Vista y Periodicidad */}
               {isDemo && (
-                <div className="flex items-center gap-2 bg-[#240E4B] rounded-full p-1 self-start sm:self-auto border border-[#35007f]">
-                  <button 
-                    onClick={() => setChartPeriod('Mensual')}
-                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                      chartPeriod === 'Mensual' 
-                        ? 'bg-[#180736] text-white shadow-sm font-bold border border-[#35007f]' 
-                        : 'text-[#c4c9ac] hover:text-white'
-                    }`}
-                  >
-                    Mensual
-                  </button>
-                  <button 
-                    onClick={() => setChartPeriod('Trimestral')}
-                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                      chartPeriod === 'Trimestral' 
-                        ? 'bg-[#180736] text-white shadow-sm font-bold border border-[#35007f]' 
-                        : 'text-[#c4c9ac] hover:text-white'
-                    }`}
-                  >
-                    Trimestral
-                  </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 bg-[#240E4B] rounded-full p-1 border border-[#35007f]">
+                    <button
+                      onClick={() => setChartViewMode('flujo')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                        chartViewMode === 'flujo'
+                          ? 'bg-[#180736] text-[#CCFF00] font-bold border border-[#35007f]'
+                          : 'text-[#c4c9ac] hover:text-white'
+                      }`}
+                    >
+                      Flujo Operativo
+                    </button>
+                    <button
+                      onClick={() => setChartViewMode('mrr6m')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+                        chartViewMode === 'mrr6m'
+                          ? 'bg-[#180736] text-[#CCFF00] font-bold border border-[#35007f]'
+                          : 'text-[#c4c9ac] hover:text-white'
+                      }`}
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      <span>Evolución MRR (Recharts)</span>
+                    </button>
+                  </div>
+
+                  {chartViewMode === 'flujo' && (
+                    <div className="flex items-center gap-2 bg-[#240E4B] rounded-full p-1 self-start sm:self-auto border border-[#35007f]">
+                      <button 
+                        onClick={() => setChartPeriod('Mensual')}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                          chartPeriod === 'Mensual' 
+                            ? 'bg-[#180736] text-white shadow-sm font-bold border border-[#35007f]' 
+                            : 'text-[#c4c9ac] hover:text-white'
+                        }`}
+                      >
+                        Mensual
+                      </button>
+                      <button 
+                        onClick={() => setChartPeriod('Trimestral')}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                          chartPeriod === 'Trimestral' 
+                            ? 'bg-[#180736] text-white shadow-sm font-bold border border-[#35007f]' 
+                            : 'text-[#c4c9ac] hover:text-white'
+                        }`}
+                      >
+                        Trimestral
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Renderizado condicional: Curva poblada si está en Demo vs Empty State limpio si está en Estado Cero */}
             {isDemo ? (
-              <div className="flex-1 flex flex-col justify-between pt-2">
+              chartViewMode === 'mrr6m' ? (
+                <div className="pt-2">
+                  <MRRDashboard />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col justify-between pt-2">
                 {/* Leyenda Financiera */}
                 <div className="flex items-center gap-6 mb-4 text-xs font-mono">
                   <div className="flex items-center gap-2">
@@ -315,6 +351,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
               </div>
+              )
             ) : (
               /* Empty State Limpio para "Estado Cero" */
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 rounded-3xl bg-[#240E4B]/40 border border-[#35007f]/50 my-auto">
